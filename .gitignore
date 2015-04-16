@@ -5,14 +5,21 @@
 !.gitignore
 
 # Allow source files (*.sv)
+source/galois/*
 !source/galois/*.sv
+
+source/point/*
 !source/point/*.sv
+
+source/des/*
 !source/des/*.sv
+
+source/*
 !source/*.sv
 
 # Allow makefile
 !makefile
 
 # Allow Final Project Proposal
-!docs/*.odt
-!docs/*.odg
+# !docs/*.odt
+# !docs/*.odg

@@ -5,17 +5,7 @@
 !.gitignore
 
 # Allow source files (*.sv)
-source/galois/*
-!source/galois/*.sv
-
-source/point/*
-!source/point/*.sv
-
-source/des/*
-!source/des/*.sv
-
-source/*
-!source/*.sv
+!source/
 
 # Allow makefile
 !makefile

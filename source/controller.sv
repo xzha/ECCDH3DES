@@ -38,6 +38,10 @@ module controller
 	
 	reg [5:0] count;
 	reg [5:0] next_count;
+	reg [163:0] next_PuX;
+	reg [163:0] next_PuY;
+	reg [163:0] PubX;
+	reg [163:0] PubY;
 
 	typedef enum bit [3:0] {IDLE, ECC1, ECC2, ECC1_DONE, ECC2_DONE, DES_DONE, KEY_WAIT1, KEY_WAIT2, INIT_WAIT, DATA_WAIT} stateType;
 
@@ -47,6 +51,9 @@ module controller
 	assign Keys[162:0] = Pox[162:0];
 	assign Keys[191:163] = Poy[28:0];
 
+	assign PuX = PubX;
+	assign PuY = PubY;
+
 	assign des_done = count[0] && (state == DES_DONE || state == INIT_WAIT || state == DATA_WAIT);
 
 	always_ff @ (posedge clk, negedge n_rst)
@@ -55,11 +62,15 @@ module controller
 		begin
 			count <= 6'd1;
 			state <= IDLE;
+			PubX = 0;
+			PubY = 0;
 		end
 		else
 		begin
 			count <= next_count;
 			state <= next_state;
+			PubX = next_PuX;
+			PubY = next_PuY;
 		end
 	end
 
@@ -169,7 +180,9 @@ module controller
 	begin: ASSIGN_LOGIC
 		estart = 1'b0;
 		ecc1_done = 1'b0;
-		ecc2_done = 1'b0;	
+		ecc2_done = 1'b0;
+		next_PuX = PubX;
+		next_PuY = PubY;	
 		
 		case(state)
 			ECC1:
@@ -184,9 +197,9 @@ module controller
 
 			ECC1_DONE:
 			begin
+				next_PuX = Pox;
+				next_PuY = Poy;
 				ecc1_done = 1'b1;
-				PuX = Pox;
-				PuY = Poy;
 			end
 
 			ECC2_DONE:

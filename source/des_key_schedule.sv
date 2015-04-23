@@ -3,7 +3,7 @@ module des_key_schedule (
 	input logic is_encrypt,
 	output logic [0:15][0:47] round_keys_1,
 	output logic [0:15][0:47] round_keys_2,
-	output logic [0:15][0:47] round_keys_3,
+	output logic [0:15][0:47] round_keys_3
 );
 
 logic [0:15][0:47] temp_round_keys_1;

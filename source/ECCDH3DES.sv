@@ -10,30 +10,45 @@ module ECCDH3DES
 (
 	input wire clk,
 	input wire n_rst,
-	input wire [63:0] data_in,
-	input wire start,
-	input wire is_encrypt,
-	output reg data_ready,
-	output reg [2:0] mode,
-	output reg [63:0] data_out
+
+	//DES
+	input wire [63:0] raw_data,
+	input wire data_valid_in,
+	output wire data_valid_out,
+	//input wire is_encrypt,
+
+	output reg [63:0] encrypted_data,
+
+	//CONT
+	input wire ecc1_start,
+	input wire ecc2_start,
+	input wire des_start,
+
+	output reg ecc1_done,
+	output reg ecc2_done,
+	output reg des_done,
+
+	output reg [163:0] PuX,
+	output reg [163:0] PuY,
+
+	//ECC
+	input wire [163:0] PX,
+	input wire [163:0] PY,
+	input wire [163:0] k
 );
 
 	reg estart;
 	reg edone;
-	reg [163:0] k;
-	reg [163:0] Pix;
-	reg [163:0] Piy;
-	reg [163:0] Pox;
-	reg [163:0] Poy;
+
 	reg [163:0] Skx;
 	reg [163:0] Sky;
-	reg [63:0] DES_input;
-	reg [63:0] DES_output;
 
-	point_multiplication ECC(.clk(clk), .n_rst(n_rst), .k(k), .x(Pix), .y(Piy), .SkX(Pox), .SkY(Poy), .start(estart), .done(edone));
+	reg [191:0] keys;
 
-	control CONT(.clk(clk), .n_rst(n_rst), .start(start), .data_in(data_in), .mode(mode), .data_out(data_out), .data_ready(data_ready), .edone(edone), .Pox(Pox), .Poy(Poy), .k(k), .Pix(Pix), .Piy(Piy), .estart(estart), .DES_output(DES_output), .Skx(Skx), .Sky(Sky), .DES_input(DES_input));
+	point_multiplication ECC(.clk(clk), .n_rst(n_rst), .k(k), .x(PX), .y(PY), .SkX(Skx), .SkY(Sky), .start(estart), .done(edone));
 
-	TripleDES DES(.clk(clk), .n_rst(n_rst), .input_block(DES_input), .SKx(Skx), .SKy(Sky), .output_block(DES_output), .is_encrypt(is_encrypt));
+	controller CONT(.clk(clk), .n_rst(n_rst), .ecc_start1(ecc1_start), .ecc_start2(ecc2_start), .des_start(des_start), .estart(estart), .Pox(Skx), .Poy(Sky), .edone(edone), .Keys(keys), .PuX(PuX), .PuY(PuY), .ecc1_done(ecc1_done), .ecc2_done(ecc2_done), .des_done(des_done));
+
+	TripleDES DES(.clk(clk), .n_rst(n_rst), .input_block(raw_data), .Sk(keys), .output_block(encrypted_data), .data_valid_in(data_valid_in), .data_valid_out(data_valid_out)); //, .is_encrypt(is_encrypt));
 
 endmodule

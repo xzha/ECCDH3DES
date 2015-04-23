@@ -8,7 +8,7 @@ genvar i;
 
 generate
 	for (i=0; i<32; i++)
-	begin
+	begin: PBOXFOR
 		assign output_wires[i] = input_wires[p_box_permutation[i]];
 	end
 endgenerate

@@ -7,7 +7,7 @@ genvar i;
 
 generate
 	for (i=0;i<16;i++)
-	begin
+	begin: REVFOR
 		assign reversed_round_keys[i] = round_keys[15-i];
 	end
 endgenerate

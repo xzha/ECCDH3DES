@@ -48,7 +48,7 @@ genvar i;
 
 generate
 	for (i=0; i<16; i++)
-	begin 
+	begin: KEYPERM2
 		des_key_permutation2 KP2U (
 			.input_wires ({left[i], right[i]}),
 			.output_wires(temp_round_keys[i])

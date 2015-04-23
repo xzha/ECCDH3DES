@@ -32,7 +32,7 @@ assign data_valid_out = data_valid[16];
 
 generate
 	for (i=0; i<16; i++)
-	begin
+	begin: DESROUNDFOR
 		des_DES_round DES_R(
 			.input_left  (left[i]),
 			.input_right (right[i]),

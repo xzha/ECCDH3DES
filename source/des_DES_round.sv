@@ -51,7 +51,7 @@ des_feistel F(
 
 assign output_left = input_right_reg;
 //assign output_right = input_left_reg ^ f_out;
-assign output_right = data_valid_reg ?  input_left_reg ^ f_out : '0;
+assign output_right = input_left_reg ^ f_out;
 assign data_valid_out = data_valid_reg;
 
 endmodule

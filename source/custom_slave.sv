@@ -11,7 +11,8 @@ module custom_slave #(
     parameter DATAWIDTH = 32,          // DATAWIDTH specifies the data width. Default 32 bits
     parameter NUMREGS = 256,              // Number of Internal Registers for Custom Logic
     parameter REGWIDTH = 32,            // Data Width for the Internal Registers. Default 32 bits
-    parameter NUMCOUNT = 10
+    parameter NUMCOUNT = 10,
+    parameter QUEUESIZE = 50
 )  
 (   
     input logic  clk,
@@ -62,11 +63,19 @@ logic data_valid_out;
 logic next_ecc1_done;
 logic next_ecc2_done; 
 logic next_des_done; 
+logic next_des_done_old; 
 
 logic [63:0] encrypted_data;
 
 logic [NUMCOUNT: 0] count;
-
+logic [NUMCOUNT: 0] head_count;
+logic [NUMCOUNT: 0] head_count_next;
+logic [NUMCOUNT: 0] next_head_count_next;
+logic [NUMCOUNT: 0] next_head_count;
+logic [NUMCOUNT: 0] tail_count;
+logic [NUMCOUNT: 0] next_tail_count;
+logic queue_full;
+logic queue_empty;
 
 logic [31:0] partial_data;
 logic [31:0] next_raw_data;
@@ -76,6 +85,12 @@ logic [63:0] next_actual_data;
 logic [63:0] actual_data;
 logic count2;
 
+logic [7:0] fifo_used;
+logic next_fifo_full, fifo_full, next_fifo_empty, fifo_empty, next_fifo_almost_full, fifo_almost_full;
+logic [31:0] next_fifo_output, fifo_output;
+
+assign queue_empty = (head_count == tail_count);
+assign queue_full = (next_head_count == tail_count);
 // Slave side 
 always_ff @ ( posedge clk ) begin 
   if(!reset_n)
@@ -83,19 +98,34 @@ always_ff @ ( posedge clk ) begin
         slave_readdata <= 32'h0;
         csr_registers <= '0;
 
-        count <=10'd0;
+        head_count <= 10'd0;
+        tail_count <= 10'd0;
+        next_head_count <= 10'd1;
         count2 <= '0;
     end else begin
 
+
+        head_count <= head_count_next;
+        next_head_count <= next_head_count_next;
+        tail_count <= next_tail_count;
         // OUTPUT SIGNAL
         ecc1_done <= next_ecc1_done;
         ecc2_done <= next_ecc2_done;
         des_done <= next_des_done;
-
+        fifo_full <= next_fifo_full;
+        fifo_empty <= next_fifo_empty;
+        fifo_almost_full <= next_fifo_almost_full;
+        fifo_output <= next_fifo_output;
 
         csr_registers[0][31] <= next_ecc1_done;
         csr_registers[0][30] <= next_ecc2_done;
         csr_registers[0][29] <= next_des_done;
+
+        csr_registers[0][28] <= fifo_full ; //queue_full;
+        csr_registers[0][27] <= fifo_empty; //queue_empty;
+        csr_registers[0][26] <= fifo_almost_full;
+        csr_registers[200] <= fifo_output;
+
 
 
         // BUFFER FOR DES
@@ -123,10 +153,10 @@ always_ff @ ( posedge clk ) begin
         end
 
         // OUTPUT DES
-        if (des_done) 
+        /*if (des_done) 
         begin
-            count2 <= count2 + 1;
-            case(count)
+            
+            case(head_count)
                 6'd0:
                 begin
                     csr_registers[32] <= encrypted_data[63:32];
@@ -378,14 +408,31 @@ always_ff @ ( posedge clk ) begin
                     csr_registers[131] <= encrypted_data[31:0];
                 end
             endcase
+            */
 
-            count <= count + 1;
-        end
-        else if(csr_registers[0][2])
+            /*head_count <= head_count + 1;
+            if(head_count >= QUEUESIZE)
+            begin
+                head_count = 0;
+            end
+            next_head_count = head_count + 1;
+            if(next_head_count >= QUEUESIZE)
+            begin
+                next_head_count = 0;
+            end
+
+        end*/
+        /*else if(csr_registers[0][2])
         begin         
-            count <= 10'd0;
-        end
-
+            count2 = count2 + 1;
+        end*/
+        /*if(csr_registers[0][26])
+        begin
+            csr_registers[200] <= csr_registers[tail_count+32];
+            tail_count = tail_count + 1;
+            if(tail_count >= QUEUESIZE)
+                tail_count = 0;
+        end*/
         // READ/WRITE
         if(slave_write && slave_chipselect && (slave_address >= 0) && (slave_address < NUMREGS))
         begin
@@ -395,7 +442,7 @@ always_ff @ ( posedge clk ) begin
         begin
             // Send a value being requested by a master. 
             // If the computation is small you may compute directly and send it out to the master directly from here.
-            slave_readdata <= csr_registers[slave_address];
+                slave_readdata <= csr_registers[slave_address];
         end
     end
 end
@@ -406,9 +453,33 @@ begin
     if (count2)
     begin
         next_actual_data = raw_data;
-    end 
+    end  
+
+    head_count_next = head_count;
+    next_head_count_next = next_head_count;
+    next_tail_count = tail_count;
+    if (des_done) 
+        begin
+        head_count_next = head_count + 1;
+        if(head_count_next >= QUEUESIZE)
+        begin
+            head_count_next = 0;
+        end
+        next_head_count_next = head_count_next + 1;
+        if(next_head_count_next >= QUEUESIZE)
+        begin
+            next_head_count_next = 0;
+        end
+    end
+    if(csr_registers[0][26])
+    begin
+        next_tail_count = tail_count + 1;
+        if(next_tail_count >= QUEUESIZE)
+            next_tail_count = 0;
+    end
 end
 
+//Current change to test code
 // DUT
 ECCDH3DES ECC
 (
@@ -428,12 +499,27 @@ ECCDH3DES ECC
     // OUTPUT
     .ecc1_done(next_ecc1_done),
     .ecc2_done(next_ecc2_done),
-    //.des_done(next_des_done),
+    .des_done(next_des_done_old),
     
-    .data_valid_in(csr_registers[0][0]),
+    .data_valid_in(csr_registers[0][2]),
     .data_valid_out(next_des_done),
     .PuX(PuX),
     .PuY(PuY)
 );
+
+fifo fifo_inst (
+    .aclr ( reset_n ),
+    .clock ( clk ),
+    .data ( encrypted_data ),
+    .rdreq ( csr_registers[0][26] ),
+    .sclr ( 0 ),
+    .wrreq ( des_done ),
+    .almost_full ( next_fifo_almost_full ),
+    .empty ( next_fifo_empty ),
+    .full ( next_fifo_full ),
+    .q ( next_fifo_output ),
+    .usedw ( fifo_used )
+    );
+
 
 endmodule 

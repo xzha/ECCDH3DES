@@ -308,12 +308,14 @@ void write_SRAM(PCIE_HANDLE hPCIe, int fileSize, FILE * fp)
 		while(!s_read) 
 		{
 			bPass = PCIE_Read32(hPCIe, pcie_bars[0], csr_registers(35), &read);
+			printf("Read = %08x", read);
 			if (!bPass)
 			{
 				printf("test FAILED: read did not return success\n");
 				return;
 			}
 			s_read = ((read >> 31) & 0x01);
+			printf(" ---- S_read = %d\n", s_read);
 		}
 
     	printf("Chunk read! %d \n", x);
@@ -410,38 +412,38 @@ void test32( PCIE_HANDLE hPCIe)
 
 
 
-	// printf("----------------------GET PUBLIC KEY----------------------\n");
+	printf("----------------------GET PUBLIC KEY----------------------\n");
 
-	// printf("\n\n");
-	// printf("------------------------FIRST MULT------------------------\n");
+	printf("\n\n");
+	printf("------------------------FIRST MULT------------------------\n");
 	
 
-	// get_Public_Keys(hPCIe, x_1, y_1, k_1, pub_x, pub_y);
+	get_Public_Keys(hPCIe, x_1, y_1, k_1, pub_x, pub_y);
 
-	// printf("PuX = ");
-	// print_164bits(pub_x);
-	// printf("PuY = ");
-	// print_164bits(pub_y);
-
-
-
-	// printf("\n\n");
-	// printf("------------------------SECOND MULT------------------------\n");
+	printf("PuX = ");
+	print_164bits(pub_x);
+	printf("PuY = ");
+	print_164bits(pub_y);
 
 
-	// get_Public_Keys(hPCIe, pub_x, pub_y, k_2, pub_x, pub_y);
+
+	printf("\n\n");
+	printf("------------------------SECOND MULT------------------------\n");
 
 
-	// printf("PuX = ");
-	// print_164bits(pub_x);
-	// printf("PuY = ");
-	// print_164bits(pub_y);
+	get_Public_Keys(hPCIe, pub_x, pub_y, k_2, pub_x, pub_y);
 
 
-	// printf("\n\n");
-	// printf("-------------------GENERATE SESSION KEYS-------------------\n");
+	printf("PuX = ");
+	print_164bits(pub_x);
+	printf("PuY = ");
+	print_164bits(pub_y);
 
-	// generate_Session_Keys(hPCIe, pub_x, pub_y, k_1);
+
+	printf("\n\n");
+	printf("-------------------GENERATE SESSION KEYS-------------------\n");
+
+	generate_Session_Keys(hPCIe, pub_x, pub_y, k_1);
 
 
 	printf("\n\n");

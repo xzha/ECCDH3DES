@@ -232,11 +232,14 @@ always_comb begin
     next_data_written = 0;
     sramWE1 = 0;
     sramRE1 = 0;
+    sramWE2 = 0;
+    sramRE2 = 0;
     data_valid_in = 0;
     next_input_data2 = input_data2;
     next_data_encrypted = data_encrypted;
     masterReadSRAM = 0;
     copyData = 0;
+    input_data1 = '0;
     case( state ) 
         IDLE : begin 
             if ( csr_registers[35][0]) begin 

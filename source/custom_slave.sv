@@ -12,7 +12,9 @@ module custom_slave #(
     parameter NUMREGS = 256,              // Number of Internal Registers for Custom Logic
     parameter REGWIDTH = 32,            // Data Width for the Internal Registers. Default 32 bits
     parameter NUMCOUNT = 10,
-    parameter QUEUESIZE = 50
+    parameter QUEUESIZE = 50,
+    parameter ADDRSIZE = 14,
+    parameter SRAMWIDTH = 64
 )  
 (   
     input logic  clk,
@@ -44,9 +46,16 @@ module custom_slave #(
     input logic  master_waitrequest
 );
 
+
+typedef enum {IDLE, WRITE_INPUT, READ_INPUT_START, READ_INPUT, WRITE_OUTPUT, READ_OUTPUT_START, READ_OUTPUT } state_t;
+state_t state, nextState;
+
+
 // CONSTANTS
 parameter START_BYTE = 32'hF00BF00B;
 parameter STOP_BYTE = 32'hDEADF00B;
+parameter SRAM_ADDR = 32'h0;
+parameter SRAM_ADDR2 = 32'h0;
 
 // GIVEN
 logic [NUMREGS-1:0][REGWIDTH-1:0] csr_registers;        // Command and Status Registers (CSR) for custom logic
@@ -58,24 +67,22 @@ logic [163:0] PuY;
 logic ecc1_done;
 logic ecc2_done; 
 logic des_done; 
-logic data_valid_out;
+logic data_valid_out, data_valid_in;
 
 logic next_ecc1_done;
 logic next_ecc2_done; 
 logic next_des_done; 
 logic next_des_done_old; 
+logic masterReadSRAM;
 
 logic [63:0] encrypted_data;
 
 logic [NUMCOUNT: 0] count;
-logic [NUMCOUNT: 0] head_count;
-logic [NUMCOUNT: 0] head_count_next;
-logic [NUMCOUNT: 0] next_head_count_next;
-logic [NUMCOUNT: 0] next_head_count;
-logic [NUMCOUNT: 0] tail_count;
-logic [NUMCOUNT: 0] next_tail_count;
-logic queue_full;
-logic queue_empty;
+
+//logic [ADDRESSWIDTH-1:0] read_address1, write_address1, read_address2, write_address2, next_read_address1, next_write_address1, next_read_address2, next_write_address2;
+logic [ADDRSIZE-1:0] sram_Addr1, sram_Addr2, next_sram_Addr2, next_sram_Addr1;
+logic [SRAMWIDTH-1:0] input_data1, output_data1, next_input_data2, input_data2, output_data2;
+logic sramRE1, sramWE1, sramRE2, sramWE2;
 
 logic [31:0] partial_data;
 logic [31:0] next_raw_data;
@@ -84,13 +91,12 @@ logic [63:0] raw_data;
 logic [63:0] next_actual_data;
 logic [63:0] actual_data;
 logic count2;
+logic next_data_written, data_written, next_data_encrypted, data_encrypted, copyData;
 
 logic [7:0] fifo_used;
 logic next_fifo_full, fifo_full, next_fifo_empty, fifo_empty, next_fifo_almost_full, fifo_almost_full;
 logic [31:0] next_fifo_output, fifo_output;
 
-assign queue_empty = (head_count == tail_count);
-assign queue_full = (next_head_count == tail_count);
 // Slave side 
 always_ff @ ( posedge clk ) begin 
   if(!reset_n)
@@ -98,16 +104,23 @@ always_ff @ ( posedge clk ) begin
         slave_readdata <= 32'h0;
         csr_registers <= '0;
 
-        head_count <= 10'd0;
-        tail_count <= 10'd0;
-        next_head_count <= 10'd1;
+        //head_count <= 10'd0;
+        //tail_count <= 10'd0;
+        //next_head_count <= 10'd1;
         count2 <= '0;
+        /*read_address1 <= SRAM_ADDR;
+        write_address1 <= SRAM_ADDR;
+        read_address2 <= SRAM_ADDR2;
+        write_address2 <= SRAM_ADDR2;*/
+        sram_Addr1 <= SRAM_ADDR;
+        sram_Addr2 <= SRAM_ADDR2;
+        input_data2 <= 0;
+        data_written <= 0;
+        data_encrypted <= 0;
+
     end else begin
 
 
-        head_count <= head_count_next;
-        next_head_count <= next_head_count_next;
-        tail_count <= next_tail_count;
         // OUTPUT SIGNAL
         ecc1_done <= next_ecc1_done;
         ecc2_done <= next_ecc2_done;
@@ -124,16 +137,43 @@ always_ff @ ( posedge clk ) begin
         csr_registers[0][28] <= fifo_full ; //queue_full;
         csr_registers[0][27] <= fifo_empty; //queue_empty;
         csr_registers[0][26] <= fifo_almost_full;
-        csr_registers[200] <= fifo_output;
+        csr_registers[100] <= fifo_output;
+        sram_Addr1 <= next_sram_Addr1;
+        sram_Addr2 <= next_sram_Addr2;
+        input_data2 <= next_input_data2;
 
 
+
+        /*read_address1 <= next_read_address1;
+        write_address1 <= next_write_address1;
+        read_address2 <= next_read_address1;
+        write_address2 <= next_write_address2;*/
+
+        sram_Addr1 <= next_sram_Addr1;
+        sram_Addr2 <= next_sram_Addr2;
+        //data_encrypted <= next_data_encrypted;
+        //data_written <= next_data_written;
+        csr_registers[38][31] <= next_data_encrypted;
+        csr_registers[38][0] <= masterReadSRAM;
+
+        if(copyData)
+        begin
+            csr_registers[39] <= output_data2[31:0];
+            csr_registers[40] <= output_data2[63:32];
+        end
 
         // BUFFER FOR DES
-        partial_data <= csr_registers[19];
-        next_raw_data <= partial_data;
-        raw_data <= {next_raw_data, partial_data};
-        actual_data <= next_actual_data;
+        //partial_data <= csr_registers[19];
+        //next_raw_data <= partial_data;
+        //raw_data <= {next_raw_data, partial_data};
+        actual_data <= output_data1;// next_actual_data;
 
+        if(next_data_written)
+        begin
+            csr_registers[35][0] <= 0;
+            csr_registers[35][31] <= 1;
+        end
+       
         // OUTPUT KEY
         if(ecc1_done)
         begin
@@ -152,287 +192,6 @@ always_ff @ ( posedge clk ) begin
             csr_registers[25][31:28] <= PuX[3:0];
         end
 
-        // OUTPUT DES
-        /*if (des_done) 
-        begin
-            
-            case(head_count)
-                6'd0:
-                begin
-                    csr_registers[32] <= encrypted_data[63:32];
-                    csr_registers[33] <= encrypted_data[31:0];
-                end
-                6'd1:
-                begin
-                    csr_registers[34] <= encrypted_data[63:32];
-                    csr_registers[35] <= encrypted_data[31:0];
-                end
-                6'd2:
-                begin
-                    csr_registers[36] <= encrypted_data[63:32];
-                    csr_registers[37] <= encrypted_data[31:0];
-                end
-                6'd3:
-                begin
-                    csr_registers[38] <= encrypted_data[63:32];
-                    csr_registers[39] <= encrypted_data[31:0];
-                end
-                6'd4:
-                begin
-                    csr_registers[40] <= encrypted_data[63:32];
-                    csr_registers[41] <= encrypted_data[31:0];
-                end
-                6'd5:
-                begin
-                    csr_registers[42] <= encrypted_data[63:32];
-                    csr_registers[43] <= encrypted_data[31:0];
-                end
-                6'd6:
-                begin
-                    csr_registers[44] <= encrypted_data[63:32];
-                    csr_registers[45] <= encrypted_data[31:0];
-                end
-                6'd7:
-                begin
-                    csr_registers[46] <= encrypted_data[63:32];
-                    csr_registers[47] <= encrypted_data[31:0];
-                end
-                6'd8:
-                begin
-                    csr_registers[48] <= encrypted_data[63:32];
-                    csr_registers[49] <= encrypted_data[31:0];
-                end
-                6'd9:
-                begin
-                    csr_registers[50] <= encrypted_data[63:32];
-                    csr_registers[51] <= encrypted_data[31:0];
-                end
-                6'd10:
-                begin
-                    csr_registers[52] <= encrypted_data[63:32];
-                    csr_registers[53] <= encrypted_data[31:0];
-                end
-                6'd11:
-                begin
-                    csr_registers[54] <= encrypted_data[63:32];
-                    csr_registers[55] <= encrypted_data[31:0];
-                end
-                6'd12:
-                begin
-                    csr_registers[56] <= encrypted_data[63:32];
-                    csr_registers[57] <= encrypted_data[31:0];
-                end
-                6'd13:
-                begin
-                    csr_registers[58] <= encrypted_data[63:32];
-                    csr_registers[59] <= encrypted_data[31:0];
-                end
-                6'd14:
-                begin
-                    csr_registers[60] <= encrypted_data[63:32];
-                    csr_registers[61] <= encrypted_data[31:0];
-                end
-                6'd15:
-                begin
-                    csr_registers[62] <= encrypted_data[63:32];
-                    csr_registers[63] <= encrypted_data[31:0];
-                end
-                6'd16:
-                begin
-                    csr_registers[64] <= encrypted_data[63:32];
-                    csr_registers[65] <= encrypted_data[31:0];
-                end
-                6'd17:
-                begin
-                    csr_registers[66] <= encrypted_data[63:32];
-                    csr_registers[67] <= encrypted_data[31:0];
-                end
-                6'd18:
-                begin
-                    csr_registers[68] <= encrypted_data[63:32];
-                    csr_registers[69] <= encrypted_data[31:0];
-                end
-                6'd19:
-                begin
-                    csr_registers[70] <= encrypted_data[63:32];
-                    csr_registers[71] <= encrypted_data[31:0];
-                end
-                6'd20:
-                begin
-                    csr_registers[72] <= encrypted_data[63:32];
-                    csr_registers[73] <= encrypted_data[31:0];
-                end
-                6'd21:
-                begin
-                    csr_registers[74] <= encrypted_data[63:32];
-                    csr_registers[75] <= encrypted_data[31:0];
-                end
-                6'd22:
-                begin
-                    csr_registers[76] <= encrypted_data[63:32];
-                    csr_registers[77] <= encrypted_data[31:0];
-                end
-                6'd23:
-                begin
-                    csr_registers[78] <= encrypted_data[63:32];
-                    csr_registers[79] <= encrypted_data[31:0];
-                end
-                6'd24:
-                begin
-                    csr_registers[80] <= encrypted_data[63:32];
-                    csr_registers[81] <= encrypted_data[31:0];
-                end
-                6'd25:
-                begin
-                    csr_registers[82] <= encrypted_data[63:32];
-                    csr_registers[83] <= encrypted_data[31:0];
-                end
-                6'd26:
-                begin
-                    csr_registers[84] <= encrypted_data[63:32];
-                    csr_registers[85] <= encrypted_data[31:0];
-                end
-                6'd27:
-                begin
-                    csr_registers[86] <= encrypted_data[63:32];
-                    csr_registers[87] <= encrypted_data[31:0];
-                end
-                6'd28:
-                begin
-                    csr_registers[88] <= encrypted_data[63:32];
-                    csr_registers[89] <= encrypted_data[31:0];
-                end
-                6'd29:
-                begin
-                    csr_registers[90] <= encrypted_data[63:32];
-                    csr_registers[91] <= encrypted_data[31:0];
-                end
-                6'd30:
-                begin
-                    csr_registers[92] <= encrypted_data[63:32];
-                    csr_registers[93] <= encrypted_data[31:0];
-                end
-                6'd31:
-                begin
-                    csr_registers[94] <= encrypted_data[63:32];
-                    csr_registers[95] <= encrypted_data[31:0];
-                end
-                6'd32:
-                begin
-                    csr_registers[96] <= encrypted_data[63:32];
-                    csr_registers[97] <= encrypted_data[31:0];
-                end
-                6'd33:
-                begin
-                    csr_registers[98] <= encrypted_data[63:32];
-                    csr_registers[99] <= encrypted_data[31:0];
-                end
-                6'd34:
-                begin
-                    csr_registers[100] <= encrypted_data[63:32];
-                    csr_registers[101] <= encrypted_data[31:0];
-                end
-                6'd35:
-                begin
-                    csr_registers[102] <= encrypted_data[63:32];
-                    csr_registers[103] <= encrypted_data[31:0];
-                end
-                6'd36:
-                begin
-                    csr_registers[104] <= encrypted_data[63:32];
-                    csr_registers[105] <= encrypted_data[31:0];
-                end
-                6'd37:
-                begin
-                    csr_registers[106] <= encrypted_data[63:32];
-                    csr_registers[107] <= encrypted_data[31:0];
-                end
-                6'd38:
-                begin
-                    csr_registers[108] <= encrypted_data[63:32];
-                    csr_registers[109] <= encrypted_data[31:0];
-                end
-                6'd39:
-                begin
-                    csr_registers[110] <= encrypted_data[63:32];
-                    csr_registers[111] <= encrypted_data[31:0];
-                end
-                6'd40:
-                begin
-                    csr_registers[112] <= encrypted_data[63:32];
-                    csr_registers[113] <= encrypted_data[31:0];
-                end
-                6'd41:
-                begin
-                    csr_registers[114] <= encrypted_data[63:32];
-                    csr_registers[115] <= encrypted_data[31:0];
-                end
-                6'd42:
-                begin
-                    csr_registers[116] <= encrypted_data[63:32];
-                    csr_registers[117] <= encrypted_data[31:0];
-                end
-                6'd43:
-                begin
-                    csr_registers[118] <= encrypted_data[63:32];
-                    csr_registers[119] <= encrypted_data[31:0];
-                end
-                6'd44:
-                begin
-                    csr_registers[120] <= encrypted_data[63:32];
-                    csr_registers[121] <= encrypted_data[31:0];
-                end
-                6'd45:
-                begin
-                    csr_registers[122] <= encrypted_data[63:32];
-                    csr_registers[123] <= encrypted_data[31:0];
-                end
-                6'd46:
-                begin
-                    csr_registers[124] <= encrypted_data[63:32];
-                    csr_registers[125] <= encrypted_data[31:0];
-                end
-                6'd47:
-                begin
-                    csr_registers[126] <= encrypted_data[63:32];
-                    csr_registers[127] <= encrypted_data[31:0];
-                end
-                6'd48:
-                begin
-                    csr_registers[128] <= encrypted_data[63:32];
-                    csr_registers[129] <= encrypted_data[31:0];
-                end
-                6'd49:
-                begin
-                    csr_registers[130] <= encrypted_data[63:32];
-                    csr_registers[131] <= encrypted_data[31:0];
-                end
-            endcase
-            */
-
-            /*head_count <= head_count + 1;
-            if(head_count >= QUEUESIZE)
-            begin
-                head_count = 0;
-            end
-            next_head_count = head_count + 1;
-            if(next_head_count >= QUEUESIZE)
-            begin
-                next_head_count = 0;
-            end
-
-        end*/
-        /*else if(csr_registers[0][2])
-        begin         
-            count2 = count2 + 1;
-        end*/
-        /*if(csr_registers[0][26])
-        begin
-            csr_registers[200] <= csr_registers[tail_count+32];
-            tail_count = tail_count + 1;
-            if(tail_count >= QUEUESIZE)
-                tail_count = 0;
-        end*/
         // READ/WRITE
         if(slave_write && slave_chipselect && (slave_address >= 0) && (slave_address < NUMREGS))
         begin
@@ -449,34 +208,127 @@ end
 
 always_comb 
 begin
-    next_actual_data = actual_data;
+    /*next_actual_data = actual_data;
     if (count2)
     begin
         next_actual_data = raw_data;
     end  
-
-    head_count_next = head_count;
-    next_head_count_next = next_head_count;
-    next_tail_count = tail_count;
+*/
     if (des_done) 
-        begin
-        head_count_next = head_count + 1;
-        if(head_count_next >= QUEUESIZE)
-        begin
-            head_count_next = 0;
-        end
-        next_head_count_next = head_count_next + 1;
-        if(next_head_count_next >= QUEUESIZE)
-        begin
-            next_head_count_next = 0;
-        end
-    end
-    if(csr_registers[0][26])
     begin
-        next_tail_count = tail_count + 1;
-        if(next_tail_count >= QUEUESIZE)
-            next_tail_count = 0;
     end
+end
+
+
+
+// Next State Logic 
+// If user wants to input data and addresses using a state machine instead of signals/conditions,
+// the following code has commented lines for how this could be done.
+always_comb begin 
+    nextState = state;
+    next_sram_Addr1 = sram_Addr1;
+    next_sram_Addr2 = sram_Addr2;
+    //nextData = wr_data;
+    next_data_written = 0;
+    sramWE1 = 0;
+    sramRE1 = 0;
+    data_valid_in = 0;
+    next_input_data2 = input_data2;
+    next_data_encrypted = data_encrypted;
+    masterReadSRAM = 0;
+    copyData = 0;
+    case( state ) 
+        IDLE : begin 
+            if ( csr_registers[35][0]) begin 
+                input_data1 = {csr_registers[37], csr_registers[36]};
+                nextState = WRITE_INPUT;
+                //nextData = wr_data;
+            end else if ( csr_registers[0][2]) begin 
+                nextState = READ_INPUT_START;               
+                //next_input_data2 = encrypted_data;
+            
+            //end else if ((sram_Addr2 - SRAM_ADDR2) == csr_registers[41] && des_start) begin
+            end else if(data_encrypted && (csr_registers[31][0] == 0)) begin
+                masterReadSRAM = 1;
+                nextState = READ_OUTPUT;
+
+            end else if ( data_valid_out ) begin 
+                nextState = WRITE_OUTPUT;
+                next_input_data2 = encrypted_data;              
+                //next_input_data2 = encrypted_data;
+            //end else if ( des_start) begin 
+                //nextState = READ_START;               
+                //next_input_data2 = encrypted_data;
+            end
+        end 
+        READ_INPUT_START: begin
+                nextState = READ_INPUT;
+                sramRE1 = 1;
+                //next_sram_Addr1 = sram_Addr1 - 1;
+        end 
+        READ_INPUT: begin
+                if(next_sram_Addr1 == SRAM_ADDR)
+                begin
+                    next_sram_Addr1 = SRAM_ADDR;
+                    nextState = IDLE;
+                end 
+                else
+                begin
+                    nextState = READ_INPUT;
+                    sramRE1 = 1;
+                    data_valid_in = 1;
+                    next_sram_Addr1 = sram_Addr1 - 1;
+                end
+        end 
+        WRITE_INPUT: begin
+                next_sram_Addr1 = sram_Addr1 + 1;
+                nextState = IDLE;
+                sramWE1 = 1;
+                next_data_written = 1;
+            end
+        WRITE_OUTPUT: begin
+            next_sram_Addr2 = sram_Addr2 + 1;
+            next_input_data2 = encrypted_data;
+            sramWE2 = 1;
+            if ( data_valid_out )  
+                nextState = WRITE_OUTPUT;   
+            else
+            begin
+                nextState = IDLE;
+                if ((sram_Addr2 - SRAM_ADDR2) >= csr_registers[41]) 
+                begin
+                    nextState = READ_OUTPUT_START;
+                end
+            end        
+        end
+        READ_OUTPUT_START: begin
+            copyData = 1;
+            sramRE2 = 1;
+            next_sram_Addr2 = sram_Addr2 - 1;
+            next_data_encrypted = 1;
+            nextState = READ_OUTPUT;
+            masterReadSRAM = 1;
+        end
+        READ_OUTPUT: begin
+            if(csr_registers[38][0] == 1)
+            begin
+                nextState = READ_OUTPUT;
+            end
+            else
+            begin
+                next_sram_Addr2 = sram_Addr2 - 1;
+                next_data_encrypted = 1;
+                sramRE2 = 1;
+                copyData = 1;
+                masterReadSRAM = 1;
+                nextState = READ_OUTPUT;
+                if(next_sram_Addr2 == SRAM_ADDR2)
+                    nextState = IDLE;
+                //masterReadSRAM = 1;
+            end
+        end
+        
+    endcase
 end
 
 //Current change to test code
@@ -501,24 +353,30 @@ ECCDH3DES ECC
     .ecc2_done(next_ecc2_done),
     .des_done(next_des_done_old),
     
-    .data_valid_in(csr_registers[0][2]),
+    .data_valid_in(data_valid_in),
     .data_valid_out(next_des_done),
     .PuX(PuX),
     .PuY(PuY)
 );
 
-fifo fifo_inst (
-    .aclr ( reset_n ),
+sram    sram_inst1 (
     .clock ( clk ),
-    .data ( encrypted_data ),
-    .rdreq ( csr_registers[0][26] ),
-    .sclr ( 0 ),
-    .wrreq ( des_done ),
-    .almost_full ( next_fifo_almost_full ),
-    .empty ( next_fifo_empty ),
-    .full ( next_fifo_full ),
-    .q ( next_fifo_output ),
-    .usedw ( fifo_used )
+    .data ( input_data1 ),
+    .rdaddress ( sram_Addr1 ),
+    .rden ( sramRE1 ),
+    .wraddress ( sram_Addr1 ),
+    .wren ( sramWE1 ),
+    .q ( output_data1 )
+    );
+
+sram    sram_inst2 (
+    .clock ( clk ),
+    .data ( input_data2 ),
+    .rdaddress ( sram_Addr2 ),
+    .rden ( sramRE2 ),
+    .wraddress ( sram_Addr2 ),
+    .wren ( sramWE2 ),
+    .q ( output_data2 )
     );
 
 

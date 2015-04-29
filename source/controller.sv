@@ -54,7 +54,7 @@ module controller
 	assign PuX = PubX;
 	assign PuY = PubY;
 
-	assign des_done = count[0] && (state == DES_DONE || state == INIT_WAIT || state == DATA_WAIT);
+	assign des_done = (state == DES_DONE || state == DATA_WAIT);
 
 	always_ff @ (posedge clk, negedge n_rst)
 	begin : FLIPFLOP
@@ -147,15 +147,15 @@ module controller
 				if(des_start == 1'b0)
 				begin
 					next_state = DES_DONE;
-					next_count = 1;
+				//	next_count = 1;
 				end
 				else
 				begin
 					next_state = DATA_WAIT;
-					if(count >= 6'd2)
-						next_count = 1;
-					else
-						next_count = count + 1;
+				//	if(count >= 6'd2)
+				//		next_count = 1;
+				//	else
+				//		next_count = count + 1;
 				end
 			end
 

@@ -54,16 +54,11 @@ state_t state, next_state;
 logic [163:0] PuX;
 logic [163:0] PuY;
 
-
-
 logic data_valid_out, data_valid_in, next_data_valid_in;
 
 logic next_ecc1_done;
-logic next_ecc2_done; 
-logic next_des_done; 
-
-
-
+logic next_ecc2_done;
+logic next_des_done;
 
 reg [SRAMWIDTH-1:0] input_data1;
 reg [ADDRSIZE-1:0] sram_Addr1;
@@ -71,13 +66,11 @@ reg sramRE1;
 reg sramWE1;
 reg [SRAMWIDTH-1:0] output_data1;
 
-
 reg [SRAMWIDTH-1:0] next_input_data1;
 reg [ADDRSIZE-1:0] next_sram_Addr1;
 reg next_sramRE1;
 reg next_sramWE1;
 reg [SRAMWIDTH-1:0] next_output_data1;
-
 
 reg [SRAMWIDTH-1:0] input_data2;
 reg [ADDRSIZE-1:0] sram_Addr2;
@@ -139,6 +132,8 @@ always_ff @ ( posedge clk ) begin
 
         data_valid_in <= 0;
 
+        actual_data <= 0;
+
     end else begin
 
         csr_registers[0][31] <= next_ecc1_done;
@@ -179,8 +174,13 @@ always_ff @ ( posedge clk ) begin
 
         data_valid_in <= next_data_valid_in;
 
+        actual_data <= next_actual_data;
+
         // DEBUG
-        csr_registers[43] = {18'b0, sram_Addr1};
+        csr_registers[50] = {18'b0, sram_Addr1};
+        csr_registers[51] = {18'b0, sram_Addr2};
+        csr_registers[52] = encrypted_data[63:32];
+        csr_registers[53] = encrypted_data[31: 0];
 
         // DEFAULT STATUS FOR SRAMS
         csr_registers[45][0] = (sram_Addr2 - SRAM_ADDR2) >= csr_registers[41];
@@ -257,7 +257,9 @@ begin : STATE_TRANSITION
     next_sramWE2 = sramWE2;
     next_sramRE2 = sramRE2;
     
-    next_data_valid_in = data_valid_in;
+    next_data_valid_in = 0;
+
+    next_actual_data = actual_data;
 
     case(state)
         IDLE:
@@ -289,7 +291,7 @@ begin : STATE_TRANSITION
                 next_sram_Addr2 = sram_Addr2 - 1;
                 next_sramRE2 = 1'b1;
             end
-            else if ( csr_registers[0][2] )
+            else if ( csr_registers[0][2] && sram_Addr1 >= SRAM_ADDR )
             begin
                 next_state = READ_INPUT;
 
@@ -341,14 +343,17 @@ begin : STATE_TRANSITION
             if(data_valid_out)
             begin
                 next_state = READ_WRITE_OUTPUT;
-                next_sramWE2 = 1'b1;
-                next_input_data2 = encrypted_data;
+
                 next_sram_Addr2 = sram_Addr2 + 1;
+                next_sramWE2 = 1'b1;
+
+                next_input_data2 = encrypted_data;
                 if(sram_Addr1 >= SRAM_ADDR)
                 begin
-                    next_actual_data = output_data1;
                     next_sram_Addr1 = sram_Addr1 - 1;
                     next_sramRE1 = 1'b1;
+
+                    next_actual_data = output_data1;
                     next_data_valid_in = 1;
                 end
             end
@@ -357,7 +362,6 @@ begin : STATE_TRANSITION
                 next_state = IDLE;
             end
         end
-
 
         READ_OUTPUT:
         begin
@@ -394,10 +398,10 @@ ECCDH3DES ECC
     // OUTPUT
     .ecc1_done(next_ecc1_done),
     .ecc2_done(next_ecc2_done),
-    .des_done(next_des_done_old),
+    .des_done(next_des_done),
     
     .data_valid_in(data_valid_in),
-    .data_valid_out(next_des_done),
+    .data_valid_out(data_valid_out),
     .PuX(PuX),
     .PuY(PuY)
 );

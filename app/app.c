@@ -262,9 +262,20 @@ void write_SRAM(PCIE_HANDLE hPCIe, int fileSize, FILE * fp)
     DWORD read;
 
 
+    DWORD address;
+
+
     for(x = 0; x < fileSize; x += 8) 
     {
-    	printf("Writing Chunk %d \n", x);
+		bPass = PCIE_Read32(hPCIe, pcie_bars[0], csr_registers(50), &address);
+		if (!bPass)
+		{
+			printf("test FAILED: read did not return success\n");
+			return;
+		}
+
+
+    	printf("Writing Chunk %d to %d\n", x, address);
     	upper = 0;
     	lower = 0;
 
@@ -302,23 +313,21 @@ void write_SRAM(PCIE_HANDLE hPCIe, int fileSize, FILE * fp)
 			return;
 		}
 
-    	printf("Waiting for chunk to be read %d \n", x);
+    	printf("Waiting for chunk to be read...\n");
 		// Wait to be read
 		char s_read = 0;
 		while(!s_read) 
 		{
 			bPass = PCIE_Read32(hPCIe, pcie_bars[0], csr_registers(35), &read);
-			printf("Read = %08x", read);
 			if (!bPass)
 			{
 				printf("test FAILED: read did not return success\n");
 				return;
 			}
 			s_read = ((read >> 31) & 0x01);
-			printf(" ---- S_read = %d\n", s_read);
 		}
+    	printf("Chunk read!\n");
 
-    	printf("Chunk read! %d \n", x);
 		// Clear register
 		bPass = PCIE_Write32(hPCIe, pcie_bars[0], csr_registers(35), 0x00000000);
 		if (!bPass)
@@ -327,9 +336,20 @@ void write_SRAM(PCIE_HANDLE hPCIe, int fileSize, FILE * fp)
 			return;
 		}
 
-    	printf("Cleared flag %d\n", x);
     }
     return;
+}
+
+void print_string_hex(char * string)
+{
+	while(*string != '\0')
+	{
+		printf("%02x",(unsigned int) * string);
+		string ++;
+	}
+	
+	printf("\n");
+
 }
 
 void read_SRAM(PCIE_HANDLE hPCIe, int fileSize, char * buffer)
@@ -341,10 +361,24 @@ void read_SRAM(PCIE_HANDLE hPCIe, int fileSize, char * buffer)
 	DWORD read;
     int i = 0;
 
+    DWORD address;
+
     for(x = 0; x < fileSize; x += 8)
     {
     	// Wait for slave to write
     	char s_write = 0;
+
+
+		bPass = PCIE_Read32(hPCIe, pcie_bars[0], csr_registers(51), &address);
+		if (!bPass)
+		{
+			printf("test FAILED: read did not return success\n");
+			return;
+		}
+    	printf("Reading Chunk %d from %d\n", x, address);
+
+
+    	printf("Waiting for chunk to be written...\n");
 		while(!s_write) 
 		{
 			bPass = PCIE_Read32(hPCIe, pcie_bars[0], csr_registers(38), &read);
@@ -355,6 +389,7 @@ void read_SRAM(PCIE_HANDLE hPCIe, int fileSize, char * buffer)
 			}
 			s_write = read & 0x01;
 		}
+    	printf("Chunk written!\n");
 
 		// Read
 		bPass = PCIE_Read32(hPCIe, pcie_bars[0], csr_registers(40), &read);
@@ -363,6 +398,7 @@ void read_SRAM(PCIE_HANDLE hPCIe, int fileSize, char * buffer)
 			printf("test FAILED: read did not return success\n");
 			return;
 		}
+
 		i = add_Buffer(buffer, read, i);
 
 		// Read
@@ -373,6 +409,11 @@ void read_SRAM(PCIE_HANDLE hPCIe, int fileSize, char * buffer)
 			return;
 		}
 		i = add_Buffer(buffer, read, i);
+
+
+		printf("-----------BUFFER-----------\n");
+		printf("%s\n", buffer);
+		printf("-----------BUFFER-----------\n");
 
 		// Set Read flag
 		bPass = PCIE_Write32(hPCIe, pcie_bars[0], csr_registers(38), 0x80000000);
@@ -452,7 +493,7 @@ void test32( PCIE_HANDLE hPCIe)
 
 
     // Open file
-    FILE * fp = fopen("./test.txt", "rb");
+    FILE * fp = fopen("./test1.txt", "rb");
 
     // Determine file size
     fseek(fp, 0, SEEK_END);
@@ -471,18 +512,54 @@ void test32( PCIE_HANDLE hPCIe)
 		return;
 	}
 
-	printf("Writing to SRAM! \n");
+	printf("---------------Writing to SRAM!---------------\n");
 
     // Write to SRAM from file
 	write_SRAM(hPCIe, fileSize, fp);
 
-	printf("Reading from SRAM! \n");
+
+	printf("--------------Reading from SRAM!--------------\n");
 
 	// Close file
     fclose(fp);
 
- 	// Set DesStart
+ 	// Set des start
 	bPass = PCIE_Write32(hPCIe, pcie_bars[0], csr_registers(0), 0x00000004);
+	if (!bPass)
+	{
+		printf("test FAILED: read did not return success\n");
+		return;
+	}
+
+	// Wait for DES to be done
+	// sleep(2);
+	
+	// DEBUG
+	int k = 0;
+	DWORD encrypted;
+
+	// while (k < 100000) 
+	// {
+	// 	bPass = PCIE_Read32(hPCIe, pcie_bars[0], csr_registers(52), &encrypted);
+	// 	if (!bPass)
+	// 	{
+	// 		printf("test FAILED: read did not return success\n");
+	// 		return;
+	// 	}
+	// 	printf("ENCRYPTED = %08x\n", encrypted);
+	// 	bPass = PCIE_Read32(hPCIe, pcie_bars[0], csr_registers(53), &encrypted);
+	// 	if (!bPass)
+	// 	{
+	// 		printf("test FAILED: read did not return success\n");
+	// 		return;
+	// 	}
+	// 	printf("ENCRYPTED = %08x\n", encrypted);
+	// }
+
+	sleep(2);
+
+	// Set start read
+	bPass = PCIE_Write32(hPCIe, pcie_bars[0], csr_registers(45), 0x80000000);
 	if (!bPass)
 	{
 		printf("test FAILED: read did not return success\n");
@@ -494,7 +571,16 @@ void test32( PCIE_HANDLE hPCIe)
 
     // Read from SRAM into buffer
 	read_SRAM(hPCIe, fileSize, buffer);
-    printf("%s",  buffer);
 
+
+	print_string_hex(buffer);
+
+ 	// Clear des_done
+	bPass = PCIE_Write32(hPCIe, pcie_bars[0], csr_registers(42), 0x00000000);
+	if (!bPass)
+	{
+		printf("test FAILED: read did not return success\n");
+		return;
+	}
 
 }

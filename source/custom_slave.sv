@@ -95,6 +95,12 @@ logic [63:0] next_actual_data;
 logic [63:0] actual_data;
 logic [63:0] encrypted_data;
 
+// DES 
+reg next_read_flag;
+reg next_write_flag;
+reg read_flag;
+reg write_flag;
+
 // CONSTANTS
 parameter START_BYTE = 32'hF00BF00B;
 parameter STOP_BYTE = 32'hDEADF00B;
@@ -133,6 +139,9 @@ always_ff @ ( posedge clk ) begin
         data_valid_in <= 0;
 
         actual_data <= 0;
+
+        read_flag <= 0;
+        write_flag <= 0;
 
     end else begin
 
@@ -176,6 +185,9 @@ always_ff @ ( posedge clk ) begin
 
         actual_data <= next_actual_data;
 
+        read_flag <= next_read_flag;
+        write_flag <= next_write_flag;
+
         // DEBUG
         csr_registers[50] = {18'b0, sram_Addr1};
         csr_registers[51] = {18'b0, sram_Addr2};
@@ -183,7 +195,7 @@ always_ff @ ( posedge clk ) begin
         csr_registers[53] = encrypted_data[31: 0];
 
         // DEFAULT STATUS FOR SRAMS
-        csr_registers[45][0] = (sram_Addr2 - SRAM_ADDR2) >= csr_registers[41];
+        csr_registers[45][0] = (sram_Addr2 < SRAM_ADDR2);
 
         // STATUS FOR SRAMS
         if (state == IDLE)
@@ -200,20 +212,6 @@ always_ff @ ( posedge clk ) begin
             csr_registers[38][31] = 1'b0;
         end
 
-        else if (state == READ_INPUT)
-        begin
-            csr_registers[38][0] = 1'b0;
-            csr_registers[38][31] = 1'b0;
-            csr_registers[35][31] = 1'b0;
-        end
-
-        else if (state == READ_WRITE_OUTPUT)
-        begin
-            csr_registers[38][0] = 1'b0;
-            csr_registers[38][31] = 1'b0;
-            csr_registers[35][31] = 1'b0;
-        end
-
         else if (state == READ_OUTPUT)
         begin
             csr_registers[38][0] = 1'b1;
@@ -223,6 +221,7 @@ always_ff @ ( posedge clk ) begin
             csr_registers[40] = output_data2[63:32];
             csr_registers[39] = output_data2[31: 0];
         end
+
 
 
         // READ/WRITE
@@ -249,8 +248,8 @@ begin : STATE_TRANSITION
 
     next_sram_Addr1 = sram_Addr1;
     next_input_data1 = input_data1;
-    next_sramWE1 = sramWE1;
-    next_sramRE1 = sramRE1;
+    next_sramWE1 = 1'b0;
+    next_sramRE1 = 1'b0;
 
     next_sram_Addr2 = sram_Addr2;
     next_input_data2 = input_data2;
@@ -260,6 +259,9 @@ begin : STATE_TRANSITION
     next_data_valid_in = 0;
 
     next_actual_data = actual_data;
+
+    next_read_flag = 0;
+    next_write_flag = 0;
 
     case(state)
         IDLE:
@@ -271,32 +273,12 @@ begin : STATE_TRANSITION
                 next_input_data1 = {csr_registers[37], csr_registers[36]};
                 next_sramWE1 = 1'b1;
             end
-            else if ( data_valid_out )
-            begin
-                next_state = READ_WRITE_OUTPUT;
-
-                next_input_data2 = encrypted_data;
-                next_sramWE2 = 1'b1;
-
-                if(sram_Addr1 >= SRAM_ADDR)
-                begin
-                    next_sram_Addr1 = sram_Addr1 - 1;
-                    next_sramRE1 = 1'b1;
-                end
-            end
             else if ( csr_registers[45][31] )
             begin
                 next_state = READ_OUTPUT;
 
                 next_sram_Addr2 = sram_Addr2 - 1;
                 next_sramRE2 = 1'b1;
-            end
-            else if ( csr_registers[0][2] && sram_Addr1 >= SRAM_ADDR )
-            begin
-                next_state = READ_INPUT;
-
-                next_sram_Addr1 = sram_Addr1 - 1;
-                next_sramRE1 = 1'b1;
             end
             else 
             begin
@@ -306,8 +288,6 @@ begin : STATE_TRANSITION
 
         WRITE_INPUT:
         begin
-            next_sramWE1 = 1'b0;
-            
             if ( write_sram_start )
             begin
                 next_state = WRITE_INPUT;
@@ -319,63 +299,48 @@ begin : STATE_TRANSITION
             end
         end
 
-
-        READ_INPUT:
-        begin
-            if(sram_Addr1 < SRAM_ADDR)
-            begin
-                next_sramRE1 = 1'b0;
-                next_state = IDLE;
-            end 
-            else
-            begin
-                next_state = READ_INPUT;
-                next_sram_Addr1 = sram_Addr1 - 1;
-                next_sramRE1 = 1;
-
-                next_actual_data = output_data1;
-                next_data_valid_in = 1;
-            end
-        end
-
-        READ_WRITE_OUTPUT:
-        begin
-            if(data_valid_out)
-            begin
-                next_state = READ_WRITE_OUTPUT;
-
-                next_sram_Addr2 = sram_Addr2 + 1;
-                next_sramWE2 = 1'b1;
-
-                next_input_data2 = encrypted_data;
-                if(sram_Addr1 >= SRAM_ADDR)
-                begin
-                    next_sram_Addr1 = sram_Addr1 - 1;
-                    next_sramRE1 = 1'b1;
-
-                    next_actual_data = output_data1;
-                    next_data_valid_in = 1;
-                end
-            end
-            else
-            begin
-                next_state = IDLE;
-            end
-        end
-
         READ_OUTPUT:
         begin
             if ( csr_registers[38][31] )
             begin
-                next_sramRE2 = 1'b0;
                 next_state = IDLE;
             end
             else
             begin
                 next_state = READ_OUTPUT;
+                next_sramRE2 = 1'b1;
             end
         end
     endcase
+
+
+    if ( csr_registers[0][2] && sram_Addr1 >= SRAM_ADDR )
+    begin
+        next_sram_Addr1 = sram_Addr1 - 1;
+        next_sramRE1 = 1'b1;
+
+        next_read_flag = 1'b1;
+    end
+
+    if ( read_flag )
+    begin
+        next_actual_data = output_data1;
+        next_data_valid_in = 1'b1;
+    end
+
+    if ( data_valid_out )
+    begin
+        next_input_data2 = encrypted_data;
+        next_sramWE2 = 1'b1;
+
+        next_write_flag = 1'b1;
+    end
+
+    if ( write_flag )
+    begin
+        next_sram_Addr2 = sram_Addr2 + 1;
+    end
+
 end
 
 //Current change to test code
@@ -409,9 +374,8 @@ ECCDH3DES ECC
 sram sram_inst1 (
     .clock ( clk ),
     .data ( input_data1 ),
-    .rdaddress ( sram_Addr1 ),
+    .address ( sram_Addr1 ),
     .rden ( sramRE1 ),
-    .wraddress ( sram_Addr1 ),
     .wren ( sramWE1 ),
     .q ( output_data1 )
 );
@@ -419,9 +383,8 @@ sram sram_inst1 (
 sram sram_inst2 (
     .clock ( clk ),
     .data ( input_data2 ),
-    .rdaddress ( sram_Addr2 ),
+    .address ( sram_Addr2 ),
     .rden ( sramRE2 ),
-    .wraddress ( sram_Addr2 ),
     .wren ( sramWE2 ),
     .q ( output_data2 )
 );

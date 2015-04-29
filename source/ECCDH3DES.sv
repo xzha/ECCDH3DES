@@ -49,6 +49,6 @@ module ECCDH3DES
 
 	controller CONT(.clk(clk), .n_rst(n_rst), .ecc_start1(ecc1_start), .ecc_start2(ecc2_start), .des_start(des_start), .estart(estart), .Pox(Skx), .Poy(Sky), .edone(edone), .Keys(keys), .PuX(PuX), .PuY(PuY), .ecc1_done(ecc1_done), .ecc2_done(ecc2_done), .des_done(des_done));
 
-	TripleDES DES(.clk(clk), .n_rst(n_rst), .input_block(raw_data), .Sk(keys), .output_block(encrypted_data), .data_valid_in(data_valid_in), .data_valid_out(data_valid_out)); //, .is_encrypt(is_encrypt));
+	des_TripleDES DES(.clk(clk), .n_rst(n_rst), .input_block(raw_data), .Sk(keys), .output_block(encrypted_data), .data_valid_in(data_valid_in), .data_valid_out(data_valid_out), .is_encrypt(1'b1));
 
 endmodule

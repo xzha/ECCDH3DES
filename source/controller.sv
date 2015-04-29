@@ -24,7 +24,7 @@ module controller
 	input wire edone,
 
 	//DES
-	output reg [191:0] Keys,			//session keys
+	output reg [0:191] Keys,			//session keys
 	//output reg is_encrypt,
 
 	//OUTPUT
@@ -48,8 +48,10 @@ module controller
 	stateType state;
 	stateType next_state;
 
-	assign Keys[162:0] = Pox[162:0];
-	assign Keys[191:163] = Poy[28:0];
+	// assign Keys[162:0] = Pox[162:0];
+	// assign Keys[191:163] = Poy[28:0];
+
+	assign Keys[0:191] = {Pox[162:0],Poy[28:0]};
 
 	assign PuX = PubX;
 	assign PuY = PubY;

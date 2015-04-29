@@ -25,13 +25,13 @@ always_ff @(posedge clk, negedge n_rst)
 begin
 	if (n_rst == 0)
 	begin
-		input_left_reg <= 0;
+		input_left_reg <= f_out;
 		input_right_reg <= 0;
 		data_valid_reg <= 0;
 	end
 	else if(data_valid_in == 0)
 	begin
-		input_left_reg <= 0;
+		input_left_reg <= f_out;
 		input_right_reg <= 0;
 		data_valid_reg <= 0;
 	end

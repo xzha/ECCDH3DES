@@ -7,6 +7,7 @@
 # Due Date: 1/22/2015
 
 import struct
+import random
 import sys
 
 from BitVector import *
@@ -218,6 +219,27 @@ def pad_file(input_file):
 def unpad_string(padded_string):
     return padded_string.rstrip()
 
+def tripleDES_enc(input_block, key_list, i):
+    fout_input = open('inputblock_{}.txt'.format(i),'w')
+    # fout_des1 = open('outputofdes_{}_1.txt'.format(i),'w')
+    # fout_des2 = open('outputofdes_{}_2.txt'.format(i),'w')
+    # fout_des3 = open('outputofdes_{}_3.txt'.format(i),'w')
+    f_out_des = open('outputofdes_{}.txt'.format(i),'w')
+
+    input_block.write_to_file(fout_input)
+
+    out1 = des('e', input_block, key_list[0])
+
+    out2 = des('e', out1, key_list[1])
+
+    out3 = des('e', out2, key_list[2])
+
+    out3.write_to_file(f_out_des)
+
+    fout_input.close()
+    f_out_des.close()
+
+
 #################################### main ######################################
 
 def main():
@@ -230,43 +252,56 @@ def main():
     key56_2 = get_encryption_key(key2)
     key56_3 = get_encryption_key(key3)
 
-    data_bv = BitVector(hexstring='6782145923015454'.lower())
+    print(key56_1.get_hex_string_from_bitvector())
+    print(key56_2.get_hex_string_from_bitvector())
+    print(key56_3.get_hex_string_from_bitvector())
+
+    # data_bv = BitVector(hexstring='6782145923015454'.lower())
+
+    data_bv_list = [BitVector(intVal=random.randint(2**62, 2**64 - 1),size=64) for i in range(100)]
+    key_list = [key56_1, key56_2, key56_3]
+
+    one_nine_two_bit_key = key1 + key2 + key3
+    keyout = open('192bitkey.txt','w')
+    one_nine_two_bit_key.write_to_file(keyout)
+
+    for i, bv in enumerate(data_bv_list):
+        tripleDES_enc(bv, key_list, i)
 
     #open('inputblock.txt','wb').write(data_bv.get_hex_string_from_bitvector())
 
-    fout_input = open('inputblock.txt','w')
-    data_bv.write_to_file(fout_input)
+    # fout_input = open('inputblock.txt','w')
+    # data_bv.write_to_file(fout_input)
 
-    out1 = des('e',data_bv, key56_1)  
+    # out1 = des('e',data_bv, key56_1)  
 
-    # print ('output of decrypt:', des('d',out1,key56_1).get_hex_string_from_bitvector())
+    # # print ('output of decrypt:', des('d',out1,key56_1).get_hex_string_from_bitvector())
 
-    fout_des1 = open('outputofdes1.txt','w')
-    #open('outputofdes1.txt','wb').write(out1.get_hex_string_from_bitvector())
-    out1.write_to_file(fout_des1)
+    # fout_des1 = open('outputofdes1.txt','w')
+    # #open('outputofdes1.txt','wb').write(out1.get_hex_string_from_bitvector())
+    # out1.write_to_file(fout_des1)
 
 
-    out2 = des('e',out1, key56_2)
+    # out2 = des('e',out1, key56_2)
 
-    #open('outputofdes2.txt','wb').write(out2.get_hex_string_from_bitvector())
+    # #open('outputofdes2.txt','wb').write(out2.get_hex_string_from_bitvector())
 
-    fout_des2 = open('outputofdes2.txt','w')
-    #open('outputofdes1.txt','wb').write(out2.get_hex_string_from_bitvector())
-    out2.write_to_file(fout_des2)
+    # fout_des2 = open('outputofdes2.txt','w')
+    # #open('outputofdes1.txt','wb').write(out2.get_hex_string_from_bitvector())
+    # out2.write_to_file(fout_des2)
 
-    out3 = des('e',out2, key56_3)
+    # out3 = des('e',out2, key56_3)
 
-    fout_des3 = open('outputofdes3.txt','w')
-    out3.write_to_file(fout_des3)
+    # fout_des3 = open('outputofdes3.txt','w')
+    # out3.write_to_file(fout_des3)
 
-    #open('outputofdes3.txt','wb').write(out3.get_hex_string_from_bitvector())
+    # #open('outputofdes3.txt','wb').write(out3.get_hex_string_from_bitvector())
 
-    one_nine_two_bit_key = key1 + key2 + key3
+    # one_nine_two_bit_key = key1 + key2 + key3
 
 
     #open('192bitkey.txt','wb').write(one_nine_two_bit_key.get_hex_string_from_bitvector())
-    keyout = open('192bitkey.txt','w')
-    one_nine_two_bit_key.write_to_file(keyout)
+
 
     #key = get_encryption_key(sys.argv[4])               # fetch the key from file specified by user
 

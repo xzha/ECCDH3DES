@@ -91,15 +91,14 @@ reg write_sram_start;
 
 reg des_done;
 
+reg read_flag_1;
+reg read_flag_2;
+reg next_read_flag_1;
+reg next_read_flag_2;
+
 logic [63:0] next_actual_data;
 logic [63:0] actual_data;
 logic [63:0] encrypted_data;
-
-// DES 
-reg next_read_flag;
-reg next_write_flag;
-reg read_flag;
-reg write_flag;
 
 // CONSTANTS
 parameter START_BYTE = 32'hF00BF00B;
@@ -114,7 +113,6 @@ logic [NUMREGS-1:0][REGWIDTH-1:0] csr_registers;        // Command and Status Re
 // SRAM VARIABLES
 assign fileSize = csr_registers[41];
 assign write_sram_start = csr_registers[35][0];
-assign des_done = csr_registers[42][0];
 
 
 // Slave side 
@@ -136,12 +134,12 @@ always_ff @ ( posedge clk ) begin
         sramWE2 <= 1'b0;
         sramRE2 <= 1'b0;
 
-        data_valid_in <= 0;
+        data_valid_in <= 1'b0;
 
-        actual_data <= 0;
+        actual_data <= '0;
 
-        read_flag <= 0;
-        write_flag <= 0;
+        read_flag_1 <= 1'b0;
+        read_flag_2 <= 1'b0;
 
     end else begin
 
@@ -185,8 +183,8 @@ always_ff @ ( posedge clk ) begin
 
         actual_data <= next_actual_data;
 
-        read_flag <= next_read_flag;
-        write_flag <= next_write_flag;
+        read_flag_1 <= next_read_flag_1;
+        read_flag_2 <= next_read_flag_2;
 
         // DEBUG
         csr_registers[50] = {18'b0, sram_Addr1};
@@ -253,15 +251,15 @@ begin : STATE_TRANSITION
 
     next_sram_Addr2 = sram_Addr2;
     next_input_data2 = input_data2;
-    next_sramWE2 = sramWE2;
-    next_sramRE2 = sramRE2;
+    next_sramWE2 = 1'b0;
+    next_sramRE2 = 1'b0;
     
-    next_data_valid_in = 0;
-
     next_actual_data = actual_data;
 
-    next_read_flag = 0;
-    next_write_flag = 0;
+    next_data_valid_in = 1'b0;
+
+    next_read_flag_1 = 1'b0;
+    next_read_flag_2 = 1'b0;
 
     case(state)
         IDLE:
@@ -313,16 +311,23 @@ begin : STATE_TRANSITION
         end
     endcase
 
-
-    if ( csr_registers[0][2] && sram_Addr1 >= SRAM_ADDR )
+    if ( csr_registers[0][2] && sram_Addr1 > SRAM_ADDR )
     begin
         next_sram_Addr1 = sram_Addr1 - 1;
         next_sramRE1 = 1'b1;
-
-        next_read_flag = 1'b1;
     end
 
-    if ( read_flag )
+    if ( sramRE1 )
+    begin
+        next_read_flag_1 = 1'b1;
+    end
+
+    if ( read_flag_1 )
+    begin
+        next_read_flag_2 = 1'b1;
+    end
+
+    if ( read_flag_2 )
     begin
         next_actual_data = output_data1;
         next_data_valid_in = 1'b1;
@@ -332,18 +337,15 @@ begin : STATE_TRANSITION
     begin
         next_input_data2 = encrypted_data;
         next_sramWE2 = 1'b1;
-
-        next_write_flag = 1'b1;
     end
 
-    if ( write_flag )
+    if ( sramWE2 )
     begin
         next_sram_Addr2 = sram_Addr2 + 1;
     end
 
 end
 
-//Current change to test code
 // DUT
 ECCDH3DES ECC
 (
@@ -358,7 +360,8 @@ ECCDH3DES ECC
     .k({csr_registers[1], csr_registers[2], csr_registers[3], csr_registers[4], csr_registers[5], csr_registers[6][31:28]}),
     .ecc1_start(csr_registers[0][0]),
     .ecc2_start(csr_registers[0][1]),
-    .des_start(csr_registers[0][2]),
+    .des_start(csr_registers[0][2] && (sram_Addr1 > SRAM_ADDR)),
+    .is_encrypt(csr_registers[0][3]),
 
     // OUTPUT
     .ecc1_done(next_ecc1_done),
@@ -390,3 +393,242 @@ sram sram_inst2 (
 );
 
 endmodule 
+
+
+
+
+
+
+// // File name : custom_slave.sv
+// // Author : Ishaan Biswas
+// // Created : 03/29/2015
+// // Version 1.0 
+// // Description : Demo example to illustrate slave interface usage
+
+
+// module custom_slave #(
+//     parameter MASTER_ADDRESSWIDTH = 26 ,    // ADDRESSWIDTH specifies how many addresses the Master can address 
+//     parameter SLAVE_ADDRESSWIDTH = 8 ,      // ADDRESSWIDTH specifies how many addresses the slave needs to be mapped to. log(NUMREGS)
+//     parameter DATAWIDTH = 32,          // DATAWIDTH specifies the data width. Default 32 bits
+//     parameter NUMREGS = 256,              // Number of Internal Registers for Custom Logic
+//     parameter REGWIDTH = 32,            // Data Width for the Internal Registers. Default 32 bits
+//     parameter NUMCOUNT = 10,
+//     parameter QUEUESIZE = 50,
+//     parameter ADDRSIZE = 14,
+//     parameter SRAMWIDTH = 64
+// )  
+// (   
+//     input logic  clk,
+//     input logic  reset_n,
+    
+//     // Interface to Top Level
+//     input logic rdwr_cntl,                  // Control Read or Write to a slave module.
+//     input logic n_action,                   // Trigger the Read or Write. Additional control to avoid continuous transactions. Not a required signal. Can and should be removed for actual application.
+//     input logic add_data_sel,               // Interfaced to switch. Selects either Data or Address to be displayed on the Seven Segment Displays.
+//     input logic [MASTER_ADDRESSWIDTH-1:0] rdwr_address, // read_address if required to be sent from another block. Can be unused if consecutive reads are required.
+
+//     // Bus Slave Interface
+//     input logic [SLAVE_ADDRESSWIDTH-1:0] slave_address,
+//     input logic [DATAWIDTH-1:0] slave_writedata,
+//     input logic  slave_write,
+//     input logic  slave_read,
+//     input logic  slave_chipselect,
+//     // input logic  slave_readdatavalid,            // These signals are for variable latency reads. 
+//     // output logic slave_waitrequest,              // See the Avalon Specifications for details  on how to use them.
+//     output logic [DATAWIDTH-1:0] slave_readdata,
+
+//     // Bus Master Interface
+//     output logic [MASTER_ADDRESSWIDTH-1:0] master_address,
+//     output logic [DATAWIDTH-1:0] master_writedata,
+//     output logic  master_write,
+//     output logic  master_read,
+//     input logic [DATAWIDTH-1:0] master_readdata,
+//     input logic  master_readdatavalid,
+//     input logic  master_waitrequest
+// );
+
+
+// typedef enum {IDLE, WRITE_INPUT, READ_INPUT_START, READ_INPUT, WRITE_OUTPUT, READ_OUTPUT_START, READ_OUTPUT } state_t;
+// state_t state, next_state;
+
+
+// reg [SRAMWIDTH-1:0] input_data1;
+// reg [ADDRSIZE-1:0] sram_Addr1;
+// reg sramRE1;
+// reg sramWE1;
+// reg [SRAMWIDTH-1:0] output_data1;
+
+
+// reg [SRAMWIDTH-1:0] next_input_data1;
+// reg [ADDRSIZE-1:0] next_sram_Addr1;
+// reg next_sramRE1;
+// reg next_sramWE1;
+// reg [SRAMWIDTH-1:0] next_output_data1;
+
+
+// reg [REGWIDTH-1:0] fileSize;
+// reg write_sram_start;
+
+// reg des_done;
+
+// // CONSTANTS
+// parameter START_BYTE = 32'hF00BF00B;
+// parameter STOP_BYTE = 32'hDEADF00B;
+// parameter SRAM_ADDR = 32'h0;
+// parameter SRAM_ADDR2 = 32'h0;
+
+// // GIVEN
+// logic [NUMREGS-1:0][REGWIDTH-1:0] csr_registers;        // Command and Status Registers (CSR) for custom logic
+
+
+// // SRAM VARIABLES
+// assign fileSize = csr_registers[41];
+// assign write_sram_start = csr_registers[35][0];
+// assign des_done = csr_registers[42][0];
+
+
+// // Slave side 
+// always_ff @ ( posedge clk ) begin 
+//   if(!reset_n)
+//     begin
+//         slave_readdata <= 32'h0;
+//         csr_registers <= '0;
+
+//         state <= IDLE;
+//         sram_Addr1 <= SRAM_ADDR;
+//         input_data1 <= '0;
+//         sramWE1 <= 1'b0;
+//         sramRE1 <= 1'b0;
+
+
+//     end else begin
+
+//         // STATE TRANSITION
+//         state <= next_state;
+//         sram_Addr1 <= next_sram_Addr1;
+//         input_data1 <= next_input_data1;
+//         sramWE1 <= next_sramWE1;
+//         sramRE1 <= next_sramRE1;
+
+//         // DEBUG
+//         csr_registers[43] = {18'b0, sram_Addr1};
+
+//         // DEFAULT STATUS FOR SRAMS
+
+//         // STATUS FOR SRAMS
+//         if (state == IDLE)
+//         begin
+//             csr_registers[35][31] = 1'b0;
+//             csr_registers[38][0] = 1'b0;
+//             csr_registers[38][31] = 1'b0;
+//         end
+
+//         else if (state == WRITE_INPUT)
+//         begin
+//             csr_registers[35][31] = 1'b1;
+//             csr_registers[38][0] = 1'b0;
+//             csr_registers[38][31] = 1'b0;
+//         end
+
+//         else if (state == READ_OUTPUT)
+//         begin
+//             csr_registers[38][0] = 1'b1;
+//             csr_registers[38][31] = 1'b0;
+//             csr_registers[35][31] = 1'b0;
+
+//             csr_registers[40] = output_data1[63:32];
+//             csr_registers[39] = output_data1[31: 0];
+//         end
+
+//         // READ/WRITE
+//         if(slave_write && slave_chipselect && (slave_address >= 0) && (slave_address < NUMREGS))
+//         begin
+//            csr_registers[slave_address] <= slave_writedata;  // Write a value to a CSR register
+//         end
+//         else if(slave_read && slave_chipselect  && (slave_address >= 0) && (slave_address < NUMREGS)) // reading a CSR Register
+//         begin
+//             // Send a value being requested by a master. 
+//             // If the computation is small you may compute directly and send it out to the master directly from here.
+//                 slave_readdata <= csr_registers[slave_address];
+//         end
+//     end
+// end
+
+
+// // Next State Logic 
+// // If user wants to input data and addresses using a state machine instead of signals/conditions,
+// // the following code has commented lines for how this could be done.
+// always_comb 
+// begin : STATE_TRANSITION
+//     next_state = state;
+//     next_sram_Addr1 = sram_Addr1;
+//     next_input_data1 = input_data1;
+//     next_sramWE1 = sramWE1;
+//     next_sramRE1 = sramRE1;
+    
+//     case(state)
+
+//         IDLE:
+//         begin
+//             if ( write_sram_start )
+//             begin
+//                 next_state = WRITE_INPUT;
+
+//                 next_input_data1 = {csr_registers[37], csr_registers[36]};
+//                 next_sramWE1 = 1'b1;
+//             end
+//             else if ( des_done )
+//             begin
+//                 next_state = READ_OUTPUT;
+
+//                 next_sram_Addr1 = sram_Addr1 - 1;
+//                 next_sramRE1 = 1'b1;
+//             end
+//             else 
+//             begin
+//                 next_state = IDLE;
+//             end
+//         end
+
+//         WRITE_INPUT:
+//         begin
+//             next_sramWE1 = 1'b0;
+            
+//             if ( write_sram_start )
+//             begin
+//                 next_state = WRITE_INPUT;
+//             end
+//             else
+//             begin
+//                 next_sram_Addr1 = sram_Addr1 + 1;
+//                 next_state = IDLE;
+//             end
+//         end
+
+//         READ_OUTPUT:
+//         begin
+//             if ( csr_registers[38][31] )
+//             begin
+//                 next_sramRE1 = 1'b0;
+//                 next_state = IDLE;
+//             end
+//             else
+//             begin
+//                 next_state = READ_OUTPUT;
+//             end
+//         end
+//     endcase
+// end
+
+// sram sram_inst1 (
+//     .clock ( clk ),
+//     .data ( input_data1 ),
+//     .rdaddress ( sram_Addr1 ),
+//     .rden ( sramRE1 ),
+//     .wraddress ( sram_Addr1 ),
+//     .wren ( sramWE1 ),
+//     .q ( output_data1 )
+// );
+
+
+// endmodule 

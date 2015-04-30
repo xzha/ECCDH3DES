@@ -16,12 +16,12 @@ include /home/ecegrid/a/ece337/Course_Prod/course_make_vars
 # (do not include the source folder in the name)
 # NOTE: YOU WILL NEED TO SET THIS VARIABLE'S VALUE WHEN WORKING WITH HEIRARCHICAL DESIGNS
 # AND THE AUTOMATED GRADING SYSTEM
-COMPONENT_FILES	:= des_key_permutation1.sv des_key_permutation2.sv des_reverse_round_keys.sv des_generate_round_keys.sv des_key_schedule.sv des_pbox_permutations.sv des_expansion_permutation.sv des_sbox_substitutions.sv des_feistel.sv des_initial_permutation.sv des_inverse_initial_permutation.sv des_DES_round.sv des_DES.sv 
+COMPONENT_FILES	:= des_key_permutation1.sv des_key_permutation2.sv des_reverse_round_keys.sv des_generate_round_keys.sv des_key_schedule.sv des_pbox_permutations.sv des_expansion_permutation.sv des_sbox_substitutions.sv des_feistel.sv des_initial_permutation.sv des_inverse_initial_permutation.sv des_DES_round.sv des_DES.sv des_TripleDES.sv gf_Mod.sv gf_Mult.sv gf_Square.sv flex_counter.sv gf_Div.sv gf_Add.sv point_addition_doubling.sv point_multiplication.sv controller.sv 
 
 # Specify the name of the top level file (do not include the source folder in the name)
 # NOTE: YOU WILL NEED TO SET THIS VARIABLE'S VALUE WHEN WORKING WITH HEIRARCHICAL DESIGNS
 # AND THE AUTOMATED GRADING SYSTEM
-TOP_LEVEL_FILE	:=  des_TripleDES.sv
+TOP_LEVEL_FILE	:=  ECCDH3DES.sv
 
 # Specify the filepath of the test bench you want to use (ie. tb_top_level.sv)
 # (do not include the source folder in the name)
@@ -44,7 +44,7 @@ M_WORK_LIB := mapped_work
 # Automatically handle whether to running on the grid or not
 LIB_CREATE	:= vlib
 COMPILE 		:= vlog -sv
-SIMULATE		:= vsim -Lf $(LABS_IP_LIB) -L $(GATE_LIB) -L $(GOLD_LIB) +no_glitch_msg -coverage  
+SIMULATE		:= vsim -Lf $(LABS_IP_LIB) -L $(GATE_LIB) -L $(GOLD_LIB) +no_glitch_msg -coverage 
 DC_SHELL		:= dc_shell-t
 
 ##############################################################################
@@ -283,8 +283,8 @@ tbsim_%_mapped: $(M_WORK_LIB)/% $(M_WORK_LIB)/tb_%
 
 # Set the default value of the clock name and clock period to an empty string so that clock timing will
 # only be activated in the SYN_CMDS definition if they were overwritten at invocation
-CLOCK_NAME 		:=
-CLOCK_PERIOD	:= 5 ns
+CLOCK_NAME 		:= clk
+CLOCK_PERIOD	:= 4
 
 # Set the default value of the source files for sub modules to be an empty string so that
 # it will only be used if overwritten at invocation
@@ -309,7 +309,7 @@ MOD_NAME := $(basename $(MAIN_FILE))
 mapped/$(TOP_MODULE).v: SHELL := /usr/local/bin/tcsh
 mapped/$(TOP_MODULE).v: source/$(TOP_LEVEL_FILE) $(addprefix source/,$(COMPONENT_FILES))
 	@echo "Synthesizing design: $@\n"
-	@$(MAKE) --no-print-directory syn_mapped MAIN_FILE='$(TOP_LEVEL_FILE)' DEP_SUB_FILES='$(COMPONENT_FILES)' CLOCK_NAME='clk' CLOCK_PERIOD='3.33' > $(TOP_MODULE).log
+	@$(MAKE) --no-print-directory syn_mapped MAIN_FILE='$(TOP_LEVEL_FILE)' DEP_SUB_FILES='$(COMPONENT_FILES)' CLOCK_NAME='$(CLOCK_NAME)' CLOCK_PERIOD='$(CLOCK_PERIOD)' > $(TOP_MODULE).log
 	@echo "Synthesis run attempt for $@ complete"
 	@echo "Checking synthesis attempt for errors"
 	@syschk -w $(TOP_MODULE)

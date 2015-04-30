@@ -342,14 +342,14 @@ void write_SRAM(PCIE_HANDLE hPCIe, int fileSize, FILE * fp)
 
 void print_string_hex(char * string)
 {
-	while(*string != '\0')
-	{
-		printf("%02x",(unsigned int) * string);
-		string ++;
-	}
-	
-	printf("\n");
+	int i = 0;
 
+	while (string[i] != '\0')
+	{
+		printf(" %02x", string[i]);
+		i++;
+	}
+	printf("\n");
 }
 
 void read_SRAM(PCIE_HANDLE hPCIe, int fileSize, char * buffer)
@@ -429,6 +429,35 @@ void read_SRAM(PCIE_HANDLE hPCIe, int fileSize, char * buffer)
     return;
 }
 
+void des(PCIE_HANDLE hPCIe, char encryption)
+{
+	BOOL bPass;
+	DWORD des;
+	char des_done = 0;
+
+
+ 	// Set des start (bit 3) /encryption (bit 4)
+	bPass = PCIE_Write32(hPCIe, pcie_bars[0], csr_registers(0), 0x00000004 | (encryption << 3));
+	if (!bPass)
+	{
+		printf("test FAILED: read did not return success\n");
+		return;
+	}
+
+	printf("Waiting for DES to complete!\n");
+	while(!des_done) 
+	{
+		bPass = PCIE_Read32(hPCIe, pcie_bars[0], csr_registers(0), &des);
+		if (!bPass)
+		{
+			printf("test FAILED: read did not return success\n");
+			return;
+		}
+		des_done = ((des >> 29) & 0x01);
+	}
+	printf("DES is completed!\n");
+}
+
 
 
 void test32( PCIE_HANDLE hPCIe)
@@ -451,12 +480,18 @@ void test32( PCIE_HANDLE hPCIe)
 	// PUB_Y
 	DWORD * pub_y = malloc(sizeof(DWORD) * (6));
 
+	// SESH_X
+	DWORD * sesh_x = malloc(sizeof(DWORD) * (6));
+
+	// SESH_Y
+	DWORD * sesh_y = malloc(sizeof(DWORD) * (6));
+
+	BOOL bPass;
 
 
 	printf("----------------------GET PUBLIC KEY----------------------\n");
 
 	printf("\n\n");
-	printf("------------------------FIRST MULT------------------------\n");
 	
 
 	get_Public_Keys(hPCIe, x_1, y_1, k_1, pub_x, pub_y);
@@ -469,28 +504,26 @@ void test32( PCIE_HANDLE hPCIe)
 
 
 	printf("\n\n");
-	printf("------------------------SECOND MULT------------------------\n");
+	printf("---------------------GET SESSION KEY----------------------\n");
 
+	get_Public_Keys(hPCIe, pub_x, pub_y, k_2, sesh_x, sesh_y);
 
-	get_Public_Keys(hPCIe, pub_x, pub_y, k_2, pub_x, pub_y);
-
-
-	printf("PuX = ");
-	print_164bits(pub_x);
-	printf("PuY = ");
-	print_164bits(pub_y);
-
-
-	printf("\n\n");
-	printf("-------------------GENERATE SESSION KEYS-------------------\n");
-
-	generate_Session_Keys(hPCIe, pub_x, pub_y, k_1);
+	printf("SeshX = ");
+	print_164bits(sesh_x);
+	printf("SeshY = ");
+	print_164bits(sesh_y);
 
 
 	printf("\n\n");
-	printf("-------------------FILE I/O-------------------\n");
+	printf("------------------GENERATE SESSION KEYS-------------------\n");
+
+	generate_Session_Keys(hPCIe, pub_x, pub_y, k_2);
+
+	printf("\n\n");
 
 
+
+	printf("-------------------------FILE I/O------------------------\n");
 
     // Open file
     FILE * fp = fopen("./test1.txt", "rb");
@@ -503,60 +536,19 @@ void test32( PCIE_HANDLE hPCIe)
     fseek(fp, 0, SEEK_SET);
     printf("FileSize %d \n", fileSize);
 
-    // Write fileSize 
-    BOOL bPass;
-	bPass = PCIE_Write32(hPCIe, pcie_bars[0], csr_registers(41), fileSize);
-	if (!bPass)
-	{
-		printf("test FAILED: read did not return success\n");
-		return;
-	}
-
-	printf("---------------Writing to SRAM!---------------\n");
+	printf("----------------------Writing to SRAM!-------------------\n");
 
     // Write to SRAM from file
 	write_SRAM(hPCIe, fileSize, fp);
 
-
-	printf("--------------Reading from SRAM!--------------\n");
-
 	// Close file
     fclose(fp);
 
- 	// Set des start
-	bPass = PCIE_Write32(hPCIe, pcie_bars[0], csr_registers(0), 0x00000004);
-	if (!bPass)
-	{
-		printf("test FAILED: read did not return success\n");
-		return;
-	}
 
-	// Wait for DES to be done
-	// sleep(2);
-	
-	// DEBUG
-	int k = 0;
-	DWORD encrypted;
+	printf("---------------------------DES---------------------------\n");
 
-	// while (k < 100000) 
-	// {
-	// 	bPass = PCIE_Read32(hPCIe, pcie_bars[0], csr_registers(52), &encrypted);
-	// 	if (!bPass)
-	// 	{
-	// 		printf("test FAILED: read did not return success\n");
-	// 		return;
-	// 	}
-	// 	printf("ENCRYPTED = %08x\n", encrypted);
-	// 	bPass = PCIE_Read32(hPCIe, pcie_bars[0], csr_registers(53), &encrypted);
-	// 	if (!bPass)
-	// 	{
-	// 		printf("test FAILED: read did not return success\n");
-	// 		return;
-	// 	}
-	// 	printf("ENCRYPTED = %08x\n", encrypted);
-	// }
-
-	sleep(2);
+	// DES
+	des(hPCIe, 0x01);
 
 	// Set start read
 	bPass = PCIE_Write32(hPCIe, pcie_bars[0], csr_registers(45), 0x80000000);
@@ -569,18 +561,17 @@ void test32( PCIE_HANDLE hPCIe)
     // Initialize buffer
     char * buffer = malloc(sizeof(char) * (fileSize + 8));
 
+	printf("---------------------Reading from SRAM!------------------\n");
+
     // Read from SRAM into buffer
 	read_SRAM(hPCIe, fileSize, buffer);
 
+	// Save output file
+	FILE * f = fopen("./output1.txt", "w");
 
-	print_string_hex(buffer);
-
- 	// Clear des_done
-	bPass = PCIE_Write32(hPCIe, pcie_bars[0], csr_registers(42), 0x00000000);
-	if (!bPass)
+	if (f != NULL)
 	{
-		printf("test FAILED: read did not return success\n");
-		return;
+		fputs(buffer, f);
+		fclose(f);
 	}
-
 }

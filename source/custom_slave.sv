@@ -144,8 +144,10 @@ always_ff @ ( posedge clk ) begin
     end else begin
 
         csr_registers[0][31] <= next_ecc1_done;
-        csr_registers[0][30] <= next_ecc2_done;
-        csr_registers[0][29] <= next_des_done;
+        csr_registers[0][25] <= next_ecc2_done;
+        csr_registers[0][24] <= next_des_done;
+        csr_registers[70][13:0] <=  (sram_Addr1 );
+
 
         // OUTPUT KEY
         if(csr_registers[0][31])

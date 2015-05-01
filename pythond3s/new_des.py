@@ -141,7 +141,7 @@ def tripleDES(file_bv, key_list, e_or_d):
     return output_bv
 
 def seperateKeys(Sx, Sy):
-    return [Sx[0:64], Sx[64:128], Sx[128:163] + Sy[0:29]]
+    return [Sx[1:65], Sx[65:129], Sx[129:163] + Sy[134:164]]
 
 def hexdump(src, length=16):
     FILTER = ''.join([(len(repr(chr(x))) == 3) and chr(x) or '.' for x in range(256)])

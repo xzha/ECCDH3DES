@@ -100,9 +100,9 @@ def extract_round_key(nkey):  # round key
 
         print ("%dleft  rk: %s"%(i, left.get_hex_string_from_bitvector()))
         print ("%dright rk: %s"%(i, right.get_hex_string_from_bitvector()))
-
+        print (i,nkey)
         nkey = left + right                                 # join
-        print ('i={}, nkey={}'.format(i,nkey))
+        #print ('i={}, nkey={}'.format(i,nkey))
         round_key.append(nkey.permute(key_permutation_2))   # add to list
 
     return round_key                                        # returns a list of the round keys
@@ -248,6 +248,27 @@ def main():
     key2 = BitVector(hexstring='beefdead1337abcd')
     key3 = BitVector(hexstring='1337abcdabcdabcd')
 
+    # Sx = BitVector(hexstring='129e4d24 d07531e5 c99ffad6 7da90056 31c44b61 a'.replace(' ',''))
+    # Sy = BitVector(hexstring='4927baba d5319b99 41617be0 17a7ee92 a188ce39 c'.replace(' ',''))
+
+    # # input_block = BitVector(textstring='deadbeef')
+
+    # one_nine_two_bit_key = Sx[0:163] + Sy[0:29]
+
+    one_nine_two_bit_key = BitVector(hexstring='39c7311ac36911c635004adf35affcc9d3c6570592593ca4')
+    print (len(one_nine_two_bit_key))
+
+    key1 = one_nine_two_bit_key[0:64]
+    key2 = one_nine_two_bit_key[64:128]
+    key3 = one_nine_two_bit_key[128:192]
+
+    print (one_nine_two_bit_key.get_hex_string_from_bitvector())
+
+    # print (len(key1))
+    # print (len(key2))
+    # print (len(key3))
+
+
     key56_1 = get_encryption_key(key1)
     key56_2 = get_encryption_key(key2)
     key56_3 = get_encryption_key(key3)
@@ -256,17 +277,33 @@ def main():
     print(key56_2.get_hex_string_from_bitvector())
     print(key56_3.get_hex_string_from_bitvector())
 
-    # data_bv = BitVector(hexstring='6782145923015454'.lower())
 
-    data_bv_list = [BitVector(intVal=random.randint(2**62, 2**64 - 1),size=64) for i in range(100)]
-    key_list = [key56_1, key56_2, key56_3]
+    # out1 = des('e', input_block, key56_1)
 
-    one_nine_two_bit_key = key1 + key2 + key3
-    keyout = open('192bitkey.txt','w')
-    one_nine_two_bit_key.write_to_file(keyout)
+    # out2 = des('e', out1, key56_2)
 
-    for i, bv in enumerate(data_bv_list):
-        tripleDES_enc(bv, key_list, i)
+    # out3 = des('e', out2, key56_3)
+
+    # print (out3.get_hex_string_from_bitvector())
+
+
+    data_bv = BitVector(intVal=0,size=64)
+
+    out1 = des('e', data_bv, key56_1)
+
+    out2 = des('e', out1, key56_2)
+
+    out3 = des('e', out2, key56_3)
+
+    # data_bv_list = [BitVector(intVal=random.randint(2**62, 2**64 - 1),size=64) for i in range(100)]
+    # key_list = [key56_1, key56_2, key56_3]
+
+    # # one_nine_two_bit_key = key1 + key2 + key3
+    # keyout = open('192bitkey.txt','w')
+    # one_nine_two_bit_key.write_to_file(keyout)
+
+    # for i, bv in enumerate(data_bv_list):
+    #     tripleDES_enc(bv, key_list, i)
 
     #open('inputblock.txt','wb').write(data_bv.get_hex_string_from_bitvector())
 

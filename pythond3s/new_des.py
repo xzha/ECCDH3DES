@@ -176,7 +176,7 @@ if __name__ == "__main__":
     else:
         raise Exception
 
-    if sys.argv[5] == '-e':
+    if sys.argv[5] == '-e' and len(file_bv)%64 != 0:
         file_bv.pad_from_right(64-(len(file_bv) % 64))
 
     result = tripleDES(file_bv, key_64_list, sys.argv[5])

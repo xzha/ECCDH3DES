@@ -56,7 +56,6 @@ generate
 	end
 endgenerate
 
-assign selected_out = 
 
 
 endmodule

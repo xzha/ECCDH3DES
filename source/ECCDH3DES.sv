@@ -15,7 +15,7 @@ module ECCDH3DES
 	input wire [63:0] raw_data,
 	input wire data_valid_in,
 	output wire data_valid_out,
-	//input wire is_encrypt,
+	input wire is_encrypt,
 
 	output reg [63:0] encrypted_data,
 
@@ -45,10 +45,14 @@ module ECCDH3DES
 
 	reg [191:0] keys;
 
+	//point_multiplication block is the module that handles all ECC operations
+
 	point_multiplication ECC(.clk(clk), .n_rst(n_rst), .k(k), .x(PX), .y(PY), .SkX(Skx), .SkY(Sky), .start(estart), .done(edone));
 
+	//controller module is in charge of whether ECC or 3DES is running.
 	controller CONT(.clk(clk), .n_rst(n_rst), .ecc_start1(ecc1_start), .ecc_start2(ecc2_start), .des_start(des_start), .estart(estart), .Pox(Skx), .Poy(Sky), .edone(edone), .Keys(keys), .PuX(PuX), .PuY(PuY), .ecc1_done(ecc1_done), .ecc2_done(ecc2_done), .des_done(des_done));
 
-	des_TripleDES DES(.clk(clk), .n_rst(n_rst), .input_block(raw_data), .Sk(keys), .output_block(encrypted_data), .data_valid_in(data_valid_in), .data_valid_out(data_valid_out), .is_encrypt(1'b1));
+	//TripleDES is the module that encrypts all data sent in
+	des_TripleDES DES(.clk(clk), .n_rst(n_rst), .input_block(raw_data), .Sk(keys), .output_block(encrypted_data), .data_valid_in(data_valid_in), .data_valid_out(data_valid_out), .is_encrypt(is_encrypt));
 
 endmodule

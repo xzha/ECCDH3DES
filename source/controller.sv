@@ -86,6 +86,7 @@ module controller
 		next_count = count;
 		
 		case(state)
+			//IDLE state chooses which operation will be done
 			IDLE:
 			begin
 				if (ecc_start1 == 1'b1)
@@ -98,6 +99,8 @@ module controller
 					next_state = state;
 			end
 
+			//ECC1 is creating the public key of a private key
+
 			ECC1:
 			begin
 				if (edone == 1'b1)
@@ -106,6 +109,8 @@ module controller
 					next_state = ECC1;
 			end
 
+			//ECC2 is creating the session keys
+
 			ECC2:
 			begin
 				if (edone == 1'b1)
@@ -113,6 +118,8 @@ module controller
 				else 
 					next_state = ECC2;
 			end
+
+			//both done states signal that the ECC is done
 
 			ECC1_DONE:
 			begin
@@ -124,6 +131,8 @@ module controller
 				next_state = IDLE;
 			end
 	
+			//Key wait is waiting for the DES to create the  round keys
+
 			KEY_WAIT1:
 			begin
 				if (count == 6'd9)
@@ -143,6 +152,8 @@ module controller
 				next_state = INIT_WAIT;
 			end
 
+			//INIT wait is waiting 48 cycles for the first chunk of data to be encrypted
+
 			INIT_WAIT:
 			begin
 				if (count == 6'd48)
@@ -156,6 +167,8 @@ module controller
 					next_count = count + 1;
 				end
 			end
+
+			//DATA_Wait is waiting for the all of the data to be sent to the 3DES 
 
 			DATA_WAIT:
 			begin
@@ -174,6 +187,8 @@ module controller
 				end
 			end
 
+			//FIN_wait is waiting the final 48 cycles for the last data to be encrypted
+
 			FIN_WAIT:
 			begin
 				if (count == 6'd48)			
@@ -189,6 +204,8 @@ module controller
 				end
 			end
 
+			//DES_DOne is used to show that the DES has finished encrypting
+
 			DES_DONE:
 			begin
 				next_state = IDLE;
@@ -201,6 +218,10 @@ module controller
 
 		endcase
 	end
+
+	//flags the  done signals when reaching a done state.
+	//flags the start signal to start the  ECC module
+	//des done will stay high until another des start is given
 
 	always_comb
 	begin: ASSIGN_LOGIC

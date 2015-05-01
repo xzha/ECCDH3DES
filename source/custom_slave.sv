@@ -147,6 +147,7 @@ always_ff @ ( posedge clk ) begin
         csr_registers[0][25] <= next_ecc2_done;
         csr_registers[0][24] <= next_des_done;
         csr_registers[70][13:0] <=  (sram_Addr1 );
+        csr_registers[72][13:0] <=  (sram_Addr2 );
 
 
         // OUTPUT KEY

@@ -20,7 +20,23 @@
 
 PCIE_BAR pcie_bars[] = { PCIE_BAR0, PCIE_BAR1 , PCIE_BAR2 , PCIE_BAR3 , PCIE_BAR4 , PCIE_BAR5 };
 
-void test32( PCIE_HANDLE hPCIe);
+
+DWORD csr_registers(char index);
+char get_Index(char var);
+void set_Registers(PCIE_HANDLE hPCIe, char var, DWORD * a);
+void get_Registers(PCIE_HANDLE hPCIe, char var, DWORD * a);
+void get_Public_Keys(PCIE_HANDLE hPCIe, DWORD * x, DWORD * y, DWORD * k, DWORD * PuX, DWORD * PuY);
+
+void generate_Session_Keys(PCIE_HANDLE hPCIe, DWORD * x, DWORD * y, DWORD * k);
+void print_164bits_file(DWORD * a, FILE * fh3);
+void print_164bits(DWORD * a);
+DWORD endian_Convert(DWORD buffer);
+int add_Buffer(char * buffer, DWORD read, int i);
+void write_SRAM(PCIE_HANDLE hPCIe, int fileSize, FILE * fp);
+void print_string_hex(char * string);
+void read_SRAM(PCIE_HANDLE hPCIe, int fileSize, char * buffer);
+void des(PCIE_HANDLE hPCIe, char encryption);
+void test32( PCIE_HANDLE hPCIe, DWORD * x, DWORD * y, DWORD * k_1, DWORD * k_2, int isEncrypt);
 void testDMA( PCIE_HANDLE hPCIe, DWORD addr);
 
 
@@ -29,6 +45,19 @@ int main(void)
 {
 	void *lib_handle;
 	PCIE_HANDLE hPCIe;
+
+
+	// X_1
+	DWORD x_1[] = {0x3f0eba16, 0x286a2d57, 0xea099116, 0x8d499463, 0x7e8343e3, 0x60000000};
+
+	// Y_1
+	DWORD y_1[] = {0x0d51fbc6, 0xc71a0094, 0xfa2cdd54, 0x5b11c5c0, 0xc797324f, 0x10000000};
+
+	// K_1
+	DWORD k_1[] = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x50000000};
+
+	// K_2
+	DWORD k_2[] = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xf0000000};
 
 	lib_handle = PCIE_Load();		// Dynamically Load the PCIE library
 	if (!lib_handle)
@@ -45,7 +74,8 @@ int main(void)
 	}
 
 	printf("*******************************************************************************\n");
-	test32(hPCIe);			// Test the Configuration Registers for reads and writes
+	test32(hPCIe, x_1, y_1, k_1, k_2, 1);			// Test the Configuration Registers for reads and writes
+	test32(hPCIe, x_1, y_1, k_2, k_1, 0);			// Test the Configuration Registers for reads and writes
 	printf("*******************************************************************************\n");
 
 	PCIE_Close(hPCIe);
@@ -224,7 +254,6 @@ void generate_Session_Keys(PCIE_HANDLE hPCIe, DWORD * x, DWORD * y, DWORD * k)
 		return;
 	}
 }
-
 
 void print_164bits_file(DWORD * a, FILE * fh3)
 {
@@ -498,19 +527,8 @@ void des(PCIE_HANDLE hPCIe, char encryption)
 
 
 
-void test32( PCIE_HANDLE hPCIe)
+void test32( PCIE_HANDLE hPCIe, DWORD * x, DWORD * y, DWORD * k_1, DWORD * k_2, int isEncrypt)
 {
-	// X_1
-	DWORD x_1[] = {0x3f0eba16, 0x286a2d57, 0xea099116, 0x8d499463, 0x7e8343e3, 0x60000000};
-
-	// Y_1
-	DWORD y_1[] = {0x0d51fbc6, 0xc71a0094, 0xfa2cdd54, 0x5b11c5c0, 0xc797324f, 0x10000000};
-
-	// K_1
-	DWORD k_1[] = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x50000000};
-
-	// K_2
-	DWORD k_2[] = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xf0000000};
 
 	// PUB_X
 	DWORD * pub_x = malloc(sizeof(DWORD) * (6));
@@ -532,7 +550,7 @@ void test32( PCIE_HANDLE hPCIe)
 	printf("\n\n");
 	
 
-	get_Public_Keys(hPCIe, x_1, y_1, k_1, pub_x, pub_y);
+	get_Public_Keys(hPCIe, x, y, k_1, pub_x, pub_y);
 
 	printf("PuX = ");
 	print_164bits(pub_x);
@@ -591,7 +609,7 @@ void test32( PCIE_HANDLE hPCIe)
 	printf("---------------------------DES---------------------------\n");
 
 	// DES
-	des(hPCIe, 0x01);
+	des(hPCIe, isEncrypt);
 
 	// Set start read
 	bPass = PCIE_Write32(hPCIe, pcie_bars[0], csr_registers(45), 0x80000000);

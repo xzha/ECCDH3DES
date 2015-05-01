@@ -1,3 +1,10 @@
+// $Id: mg78 $
+// Created:     3/31/2015 
+// Author:      Nico Bellante
+// Lab Section: 337-03
+// Version:     1.0  Initial Design Entry
+// Description: DES CODE
+
 module des_DES (
 	input logic [0:63] input_block,
 	input logic [0:15][0:47] round_keys,
@@ -5,7 +12,9 @@ module des_DES (
 	input logic n_rst,
 	input logic data_valid_in,
 	output logic data_valid_out,
-	output logic [0:63] output_block
+	output logic [0:63] output_block,
+	input logic [4:0] round_select,
+	output logic [0:63] selected_out
 );
 genvar i;
 
@@ -46,6 +55,8 @@ generate
 			);
 	end
 endgenerate
+
+assign selected_out = 
 
 
 endmodule

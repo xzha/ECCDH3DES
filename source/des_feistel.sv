@@ -1,3 +1,10 @@
+// $Id: mg78 $
+// Created:     3/31/2015 
+// Author:      Nico Bellante
+// Lab Section: 337-03
+// Version:     1.0  Initial Design Entry
+// Description: DES CODE
+
 module des_feistel (
 	input wire [0:31] f_input_wires,
 	input wire [0:47] round_key,

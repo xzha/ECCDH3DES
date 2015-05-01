@@ -7,7 +7,6 @@
 # Due Date: 1/22/2015
 
 import struct
-import random
 import sys
 
 from BitVector import *

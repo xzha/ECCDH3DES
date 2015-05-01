@@ -212,7 +212,7 @@ if __name__ == "__main__":
         elif sys.argv[8] == '-h':
             verilog_output = BitVector(hexstring=open(sys.argv[7],'r').read())
 
-        if verilog_output != result:
+        if verilog_output.get_hex_string_from_bitvector() != result.get_hex_string_from_bitvector():
             raise ValueError("Output does not match python!")
 
 

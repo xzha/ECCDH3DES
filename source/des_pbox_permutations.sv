@@ -1,3 +1,10 @@
+// $Id: mg78 $
+// Created:     3/31/2015 
+// Author:      Nico Bellante
+// Lab Section: 337-03
+// Version:     1.0  Initial Design Entry
+// Description: DES CODE
+
 module des_pbox_permutations (
 	input wire [0:31] input_wires,
 	output wire [0:31] output_wires

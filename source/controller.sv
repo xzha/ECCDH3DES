@@ -38,12 +38,13 @@ module controller
 	
 	reg [5:0] count;
 	reg [5:0] next_count;
+	reg next_des_done;
 	reg [163:0] next_PuX;
 	reg [163:0] next_PuY;
 	reg [163:0] PubX;
 	reg [163:0] PubY;
 
-	typedef enum bit [3:0] {IDLE, ECC1, ECC2, ECC1_DONE, ECC2_DONE, DES_DONE, KEY_WAIT1, KEY_WAIT2, INIT_WAIT, DATA_WAIT} stateType;
+	typedef enum bit [3:0] {IDLE, ECC1, ECC2, ECC1_DONE, ECC2_DONE, DES_DONE, KEY_WAIT1, KEY_WAIT2, INIT_WAIT, DATA_WAIT, FIN_WAIT} stateType;
 
 	stateType state;
 	stateType next_state;
@@ -56,23 +57,26 @@ module controller
 	assign PuX = PubX;
 	assign PuY = PubY;
 
-	assign des_done = (state == DES_DONE || state == DATA_WAIT);
+	//assign des_done = (state == DES_DONE || state == DATA_WAIT);
 
 	always_ff @ (posedge clk, negedge n_rst)
 	begin : FLIPFLOP
 		if (n_rst == 0)
 		begin
-			count <= 6'd1;
+
+			count <= 6'd0;
 			state <= IDLE;
-			PubX = 0;
-			PubY = 0;
+			PubX <= 0;
+			PubY <= 0;
+			des_done <= 0;
 		end
 		else
 		begin
 			count <= next_count;
 			state <= next_state;
-			PubX = next_PuX;
-			PubY = next_PuY;
+			des_done <= next_des_done;
+			PubX <= next_PuX;
+			PubY <= next_PuY;
 		end
 	end
 
@@ -122,7 +126,16 @@ module controller
 	
 			KEY_WAIT1:
 			begin
-				next_state = KEY_WAIT2;
+				if (count == 6'd9)
+				begin
+					next_state = KEY_WAIT2;
+					next_count = 6'd0;
+				end
+				else
+				begin
+					next_state = KEY_WAIT1;
+					next_count = count + 1;
+				end
 			end
 
 			KEY_WAIT2:
@@ -135,7 +148,7 @@ module controller
 				if (count == 6'd48)
 				begin
 					next_state = DATA_WAIT;
-					next_count = 1;
+					next_count = 0;
 				end
 				else
 				begin
@@ -148,7 +161,7 @@ module controller
 			begin
 				if(des_start == 1'b0)
 				begin
-					next_state = DES_DONE;
+					next_state = FIN_WAIT;
 				//	next_count = 1;
 				end
 				else
@@ -161,19 +174,30 @@ module controller
 				end
 			end
 
-			DES_DONE:
+			FIN_WAIT:
 			begin
 				if (count == 6'd48)			
 				begin					
-					next_count = 1;	
-					next_state = IDLE;
+					next_count = 0;	
+					next_state = DES_DONE;
+					//des_done = 1'b1;
 				end				
 				else
 				begin
 					next_count = count + 1;
-					next_state = DES_DONE;
+					next_state = FIN_WAIT;
 				end
 			end
+
+			DES_DONE:
+			begin
+				next_state = IDLE;
+			end
+
+			//DES_DONE_2:
+			//begin
+			//	next_state = IDLE;
+			//end
 
 		endcase
 	end
@@ -183,10 +207,17 @@ module controller
 		estart = 1'b0;
 		ecc1_done = 1'b0;
 		ecc2_done = 1'b0;
+		//des_done = 1'b0;
 		next_PuX = PubX;
-		next_PuY = PubY;	
+		next_PuY = PubY;
+		next_des_done = des_done;	
 		
 		case(state)
+			KEY_WAIT1:
+			begin
+				next_des_done = 1'b0;
+			end
+
 			ECC1:
 			begin 
 				estart = 1'b1;
@@ -208,6 +239,16 @@ module controller
 			begin
 				ecc2_done = 1'b1;
 			end
+
+			DES_DONE:
+			begin
+				next_des_done = 1'b1;
+			end
+
+			//DES_DONE_2:
+			//begin
+			//	next_des_done = 1'b1;
+			//end
 
 		endcase
 	end

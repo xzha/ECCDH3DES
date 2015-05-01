@@ -123,6 +123,8 @@ def tripleDES(file_bv, key_list, e_or_d):
     if e_or_d == '-d':
         key_list.reverse()
 
+    print '192bitkey(hex): ',''.join([key.get_hex_string_from_bitvector() for key in key_list])
+
     key_56_list = [key.permute(key_permutation_1) for key in key_64_list]
     round_keys = [extract_round_key(key) for key in key_56_list] 
 

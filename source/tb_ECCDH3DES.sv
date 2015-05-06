@@ -44,13 +44,14 @@ module tb_ECCDH3DES
 	reg tb_n_rst;
 	reg tb_start;
 	reg tb_done;
+	logic tb_is_encrypt;
 
 	//Regs going to be used to show functionality
 	reg [63:0] tb_raw_data, tb_encrypted_data;
 	reg tb_data_valid_in, tb_data_valid_out;
 	reg tb_ecc1_start, tb_ecc2_start, tb_des_start, tb_ecc1_done, tb_ecc2_done, tb_des_done; 
-	reg [NUM_BITS:0] tb_PX, tb_PY, tb_PuX, tb_PuY;
-	reg [NUM_BITS:0]tb_k;
+	logic [NUM_BITS:0] tb_PX, tb_PY, tb_PuX, tb_PuY;
+	logic [NUM_BITS:0]tb_k;
 
 	integer i;
 	integer tb_test_num;
@@ -104,7 +105,8 @@ module tb_ECCDH3DES
 	 	.raw_data      (tb_raw_data),
 	 	.data_valid_in (tb_data_valid_in),
 	 	.data_valid_out(tb_data_valid_out),
-	 	.encrypted_data(tb_encrypted_data),
+	 	.encrypted_data(tb_actual_output),
+	 	.is_encrypt(tb_is_encrypt),
 
 		//CONT
 		.ecc1_start    (tb_ecc1_start),
@@ -161,16 +163,9 @@ module tb_ECCDH3DES
 	// Test bench process
 	initial
 	begin
+		tb_is_encrypt = 1;
 
-		/*key_f = $fopen(KEY_FILE, "rb");
-
-		for (i=0; i<24; i++)
-		begin
-			$fscanf(key_f,"%c",tb_Sk[i]);
-		end
-		
-		$fclose(key_f);*/
-
+		current_test_case_index = 0;
 		for (j=0; j<NUM_TEST_CASES; j++)
 		begin
 
@@ -259,7 +254,7 @@ module tb_ECCDH3DES
 		@(negedge tb_clk);
 		tb_ecc1_start = 0;
 
-		//Waits till it gets a 1 from tb_done, this will indicate that the first point mult is done
+		//Waits till it gets a 1 from tb_done, this will indicate that the second point mult is done
 		while(1)
 		begin
 			@(posedge tb_ecc1_done);
@@ -291,7 +286,7 @@ module tb_ECCDH3DES
 		@(negedge tb_clk);
 		tb_ecc2_start = 0;
 
-		//Waits till it gets a 1 from tb_done, this will indicate that the first point mult is done
+		//Waits till it gets a 1 from tb_done, this will indicate that the third point mult is done
 		while(1)
 		begin
 			@(posedge tb_ecc2_done);
@@ -310,25 +305,15 @@ module tb_ECCDH3DES
 		tb_sesPubAPrivBX = tb_PuX;
 		tb_sesPubAPrivBY = tb_PuY;
 		tb_des_start = 1;
-		
-		tb_raw_data = 64'h6465616462656566;
-		tb_data_valid_in = 1'b1;
-		@(negedge tb_clk);
-		tb_data_valid_in = 1'b0;
-		@(negedge tb_clk);	
-		
-		tb_raw_data = 16'h0;
-		tb_data_valid_in = 1'b1;
-		@(negedge tb_clk);
-		tb_data_valid_in = 1'b0;
-		@(negedge tb_clk);	
 	
+
 		for (i=0; i<20; i++)
 		begin
-			//input_data(tb_input_block[current_test_case_index]);
+			input_data(tb_input_block[current_test_case_index]);
 	    end
 
 
+	    //DONE With DES 
 		@(negedge tb_clk);
 		tb_des_start = 0;
 		@(negedge tb_clk);

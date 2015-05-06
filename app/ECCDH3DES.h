@@ -21,27 +21,24 @@
 #define START_BYTE 0xF00BF00B
 #define RWSIZE (32 / 8)
 
+// FUNCTION
+DWORD csr_registers(char);
+char get_Index(char);
+char convert_Hex(char);
+void read_Key_File(FILE *, DWORD *);
+void set_Registers(PCIE_HANDLE, char, DWORD *);
+void get_Registers(PCIE_HANDLE, char, DWORD *);
 
+void get_Public_Keys(PCIE_HANDLE, DWORD *, DWORD *, DWORD *, DWORD *, DWORD *);
+void generate_Session_Keys(PCIE_HANDLE, DWORD *, DWORD *, DWORD *);
 
-DWORD csr_registers(char index);
-char get_Index(char var);
-void set_Registers(PCIE_HANDLE hPCIe, char var, DWORD * a);
-void get_Registers(PCIE_HANDLE hPCIe, char var, DWORD * a);
+void print_164bits_file(FILE *, DWORD *);
+void print_164bits(DWORD *);
+void print_string_hex(char *);
+DWORD endian_Convert(DWORD);
+void print_Read(DWORD, FILE *);
 
-void get_Public_Keys(PCIE_HANDLE hPCIe, DWORD * x, DWORD * y, DWORD * k, DWORD * PuX, DWORD * PuY);
-void generate_Session_Keys(PCIE_HANDLE hPCIe, DWORD * x, DWORD * y, DWORD * k);
-
-void print_164bits_file(DWORD * a, FILE * fh3);
-void print_164bits(DWORD * a);
-void print_string_hex(char * string);
-DWORD endian_Convert(DWORD buffer);
-void print_Read(DWORD read, FILE * fp);
-
-int add_Buffer(char * buffer, DWORD read, int i);
-void write_SRAM(PCIE_HANDLE hPCIe, int fileSize, FILE * fp);
-void read_SRAM(PCIE_HANDLE hPCIe, int fileSize, char * buffer, char * output1);// char * output2);
-void des(PCIE_HANDLE hPCIe, char encryption);
-
-void eccdh3des( PCIE_HANDLE hPCIe, DWORD * x, DWORD * y, DWORD * k_1, DWORD * k_2, int isEncrypt);
-
+void write_SRAM(PCIE_HANDLE, FILE *, int);
+void read_SRAM(PCIE_HANDLE, FILE *, int);
+void des(PCIE_HANDLE, FILE *, FILE*, char);
 #endif

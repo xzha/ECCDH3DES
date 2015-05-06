@@ -10,9 +10,14 @@ module gf_Mod
 	parameter NUM_BITS = 163
 )
 (
+	// Input
 	input wire [351:0] poly,
+
+	// Output
 	output wire [163:0] rr_poly
 );
+
+	// Input
 	reg [31:0] g10;
 	reg [31:0] g09;
 	reg [31:0] g08;
@@ -25,6 +30,7 @@ module gf_Mod
 	reg [31:0] g01;
 	reg [31:0] g00;
 
+	// Chunk down input
 	assign g10 = poly[351:320];
 	assign g09 = poly[319:288];
 	assign g08 = poly[287:256];
@@ -37,6 +43,7 @@ module gf_Mod
 	assign g01 = poly[63:32];
 	assign g00 = poly[31:0];
 
+	// Intermediate variables
 	reg [31:0] o_g06;
 	reg [31:0] o_g05;
 	reg [31:0] o_g04;
@@ -45,7 +52,6 @@ module gf_Mod
 	reg [31:0] o_g01;
 	reg [31:0] o_g00;
 
-
 	reg [31:0] t;
 	reg [31:0] tt;
 	reg [31:0] oo_g00;
@@ -53,8 +59,10 @@ module gf_Mod
 	reg [31:0] oo_g01;
 	reg [31:0] oo_g05;
 
+	// Output
 	reg [191:0] r_poly;
 
+	// Output
 	assign r_poly[191:160] = oo_g05;
 	assign r_poly[159:128] = o_g04;
 	assign r_poly[127:96]  = o_g03;
@@ -64,8 +72,10 @@ module gf_Mod
 
 	assign rr_poly = r_poly[163:0];
 
+	// Combinational 
 	always_comb
 	begin
+		// Implement algorithm
 		o_g06 = g06 ^ (g10 >> 28) ^ (g10 >> 29);
 		o_g05 = g05 ^ (g10 >> 3) ^ (g10 << 4) ^ (g10 << 3) ^ g10 ^ (g09 >> 28) ^ (g09 >> 29);
 		o_g04 = g04 ^ (g10 << 29) ^ (g09 >> 3) ^ (g09 << 4) ^ (g09 << 3) ^ g09 ^ (g08 >> 28) ^ (g08 >> 29);

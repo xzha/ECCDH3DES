@@ -26,6 +26,7 @@ logic [0:63] DES2_output;
 logic data_valid_out_1;
 logic data_valid_out_2;
 
+// instantiate key_sched 
 des_key_schedule KS (
 	.Sk(Sk),
 	.is_encrypt(is_encrypt),
@@ -34,7 +35,7 @@ des_key_schedule KS (
 	.round_keys_3(round_keys_3)
 	);
 
-
+// instantiate des1
 des_DES DES1 (
 	.input_block     (input_block),
 	.round_keys      (round_keys_1),
@@ -45,6 +46,7 @@ des_DES DES1 (
 	.data_valid_out  (data_valid_out_1)
 	);
 
+// instantiate des2
 des_DES DES2 (
 	.input_block	(DES1_output),
 	.round_keys 	(round_keys_2),
@@ -55,6 +57,7 @@ des_DES DES2 (
 	.data_valid_out (data_valid_out_2)
 	);
 
+// instantiate des3
 des_DES DES3 (
 	.input_block     (DES2_output),
 	.round_keys 	 (round_keys_3),

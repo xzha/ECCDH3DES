@@ -3,13 +3,15 @@
 // Author:      Nico Bellante
 // Lab Section: 337-03
 // Version:     1.0  Initial Design Entry
-// Description: DES CODE
+// Description: Expansion Permutation
 
 module des_expansion_permutation (
 	input logic [0:31] input_wires,
 	output logic [0:47] output_wires
 
 );
+
+// expansion permutation adhereing to DES standards
 
 assign output_wires[0] = input_wires[31];
 assign output_wires[1] = input_wires[0];

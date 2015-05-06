@@ -3,7 +3,7 @@
 // Author:      Nico Bellante
 // Lab Section: 337-03
 // Version:     1.0  Initial Design Entry
-// Description: DES CODE
+// Description: key schedule block
 
 module des_key_schedule (
 	input logic [0:191] Sk,
@@ -13,14 +13,17 @@ module des_key_schedule (
 	output logic [0:15][0:47] round_keys_3
 );
 
+// temp round keys
 logic [0:15][0:47] temp_round_keys_1;
 logic [0:15][0:47] temp_round_keys_2;
 logic [0:15][0:47] temp_round_keys_3;
 
+// 3 56 bit keys
 logic [0:55] Sk1; 
 logic [0:55] Sk2; 
 logic [0:55] Sk3; 
 
+// instantiates 3 key permutation blocks 
 des_key_permutation1 KP1U1 (
 	.input_wires (Sk[0:63]),
 	.output_wires(Sk1)
@@ -55,6 +58,7 @@ des_generate_round_keys GRKU3 (
 	);
 
 
+// reverse round keys if decryption
 assign round_keys_1 = is_encrypt ? temp_round_keys_1 : temp_round_keys_3;
 assign round_keys_3 = is_encrypt ? temp_round_keys_3 : temp_round_keys_1;
 assign round_keys_2 = temp_round_keys_2;

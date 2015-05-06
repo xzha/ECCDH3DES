@@ -3,13 +3,14 @@
 // Author:      Nico Bellante
 // Lab Section: 337-03
 // Version:     1.0  Initial Design Entry
-// Description: DES CODE
+// Description: inverse inital permutation
 
 module des_inverse_initial_permutation (
 	input logic [0:63] input_wires,
 	output logic [0:63] output_wires
 );
 
+	// applies the inverse of the initial permutation as specified by the DES standards
 	assign output_wires[0] = input_wires[39];
 	assign output_wires[1] = input_wires[7];
 	assign output_wires[2] = input_wires[47];

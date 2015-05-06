@@ -26,13 +26,13 @@ logic [0:47] actual_round_key;
 
 logic data_valid_reg;
 
-//assign actual_round_key = data_valid_in ? round_key : 48'b0;
-
+// registers for DES_round
+// form the 48 stage pipeline for triple DES
 always_ff @(posedge clk, negedge n_rst) 
 begin
 	if (n_rst == 0)
 	begin
-		input_left_reg <= f_out;
+		input_left_reg <= f_out; // resets to f_out so that when it is xored with f_out it yields zero
 		input_right_reg <= 0;
 		data_valid_reg <= 0;
 	end
@@ -56,8 +56,8 @@ des_feistel F(
 	.f_output_wires(f_out)
 	);
 
+// assign outputs
 assign output_left = input_right_reg;
-//assign output_right = input_left_reg ^ f_out;
 assign output_right = input_left_reg ^ f_out;
 assign data_valid_out = data_valid_reg;
 

@@ -1,8 +1,16 @@
+// $Id: mg78$
+// Created: 3/18/2015
+// Author: Nico Bellante
+// Lab Section: 337-03
+// Description: sbox substitutions
+
+
 module des_sbox_substitutions (
     input logic [0:47] input_wires,
     output logic [0:31] output_wires
 );
 
+// applies sbox substitutions as per the standards set for DES
 always_comb
 begin
 case(input_wires[0:5])

@@ -3,13 +3,14 @@
 // Author:      Nico Bellante
 // Lab Section: 337-03
 // Version:     1.0  Initial Design Entry
-// Description: DES CODE
+// Description: initial permutation for DES
 
 module des_initial_permutation (
 	input logic [0:63] input_wires,
 	output logic [0:63] output_wires
 );
 
+	// permutes the input to output as specified by DES standards
 	assign output_wires[0] = input_wires[57];
 	assign output_wires[1] = input_wires[49];
 	assign output_wires[2] = input_wires[41];

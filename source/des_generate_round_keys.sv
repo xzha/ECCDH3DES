@@ -3,7 +3,7 @@
 // Author:      Nico Bellante
 // Lab Section: 337-03
 // Version:     1.0  Initial Design Entry
-// Description: DES CODE
+// Description: generate round keys
 
 module des_generate_round_keys(
 	input logic [0:55] input_key,
@@ -16,7 +16,7 @@ logic [0:15][0:27] right;
 logic [0:15][0:47] temp_round_keys;
 logic [0:15][0:47] reversed_round_keys;
 
-
+// assign left and right to be shifted concatenated versions of input key as per DES standards
 assign left[0] = {input_key[1:27], input_key[0]};
 assign left[1] = {input_key[2:27], input_key[0:1]};
 assign left[2] = {input_key[4:27], input_key[0:3]};
@@ -54,7 +54,7 @@ assign right[15] = input_key[28:55];
 genvar i;
 
 generate
-	for (i=0; i<16; i++)
+	for (i=0; i<16; i++) // apply key permutation 2 on all of the formed keys
 	begin: KEYPERM2
 		des_key_permutation2 KP2U (
 			.input_wires ({left[i], right[i]}),
@@ -64,12 +64,14 @@ generate
 
 endgenerate
 
+// reverse round keys for decryption
 des_reverse_round_keys RVRK (
 	.round_keys(temp_round_keys),
 	.reversed_round_keys(reversed_round_keys)
 	);
 
-
+// if encrypting, give the normal round keys as output. 
+// if decrypting, give the reversed round keys as output
 always_comb
 begin
 	if (is_encrypt == 1'b1)

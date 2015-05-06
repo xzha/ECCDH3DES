@@ -18,7 +18,6 @@ module tb_gf_Square
 	localparam NUM_TEST_CASES = 10;
 	localparam CHECK_DELAY = 1; // Check 1ns after the rising edge to allow for propagation delay
 
-  //novopt issue
 	// Declare test bench signals
 	reg tb_tx_out;
 	reg [1:0] tb_sda_mode;
@@ -28,12 +27,8 @@ module tb_gf_Square
 	reg [NUM_BITS:0]tb_A;
 	reg [NUM_BITS:0]tb_squared;
 	reg tb_done;
-	//integer tb_test_num;
 
-/*#(
-		.NUM_BITS(8),
-		.NUM_SHIFTS(2)
-	)	*/
+	
 	// DUT Port maps
 	gf_Square DUT(.A(tb_A), .Squared(tb_squared));
 
@@ -41,14 +36,6 @@ module tb_gf_Square
 	// Test bench process
 	initial
 	begin
-		/*tb_A = 9'b010000100;
-		tb_B = 9'b000000011;
-		
-		#(20);
-
-		tb_A = 9'b011111111;
-		tb_B = 9'b011111111;
-*/
 		tb_A = {1'b0, 1'b1, 1'b1, 153'b0, 1'b1, 1'b1, 2'b0, 1'b1, 2'b0, 1'b1};
 		#(5);			
 		tb_A = {1'b0, 1'b0, 1'b0, 153'b0, 1'b0, 1'b1, 2'b1, 1'b1, 2'b0, 1'b1};

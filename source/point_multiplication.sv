@@ -68,12 +68,13 @@ module point_multiplication
 	genvar i;
 	generate
 	for(i = 0; i <= NUM_BITS; i++)
-	begin
+	begin: REVERSEBITS
 		assign k_r[NUM_BITS - i] = k[i];
 	end
 
 	endgenerate
-	// STATE TRANSITION
+	
+	//Flip-flop logic
 	always_ff @ (negedge n_rst, posedge clk)
 	begin : MOORE
 		if (1'b0 == n_rst)
@@ -105,6 +106,7 @@ module point_multiplication
 		end
 	end
 
+	//Next-state logic
 	always_comb
 	begin : NEXT_STATE
 		next_state = state;
@@ -118,9 +120,10 @@ module point_multiplication
 		next_SkY = SkY;
 		next_pointAddDouble_start = pointAddDouble_start;
 		next_pointAddDouble_mode = pointAddDouble_mode;
-		// rollover_val = 0;
 		count_clear = 0;
 		count_start = 0;
+
+		//Follows algorithm as shown
 		case(state)
 			IDLE:
 			begin
@@ -162,7 +165,6 @@ module point_multiplication
 			end
 			CHECKKVAL:
 			begin
-				// rollover_val  = 162;
 				if(count_done)
 				begin
 					next_state = CONVERTAFFINE;
@@ -313,6 +315,8 @@ module point_multiplication
 	end
 
 	assign done = (state == DONE);
+
+	//Block Instantiations 
 	gf_Square
 	#(
 		.NUM_BITS(NUM_BITS)	

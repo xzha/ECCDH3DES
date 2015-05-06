@@ -5,13 +5,6 @@
 // Lab Section: 337-03
 // Version:     1.0  Initial Design Entry
 // Description: Galois Field Squaring .
-// $Id: $
-// File name:   gf_Mult.sv
-// Created:     3/18/2015
-// Author:      Manish Gupta
-// Lab Section: 337-03
-// Version:     1.0  Initial Design Entry
-// Description: Galoid Field Multiplication
 
 module gf_Square
 #(

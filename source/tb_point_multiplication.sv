@@ -20,22 +20,17 @@ module tb_point_multiplication
 	localparam NUM_TEST_CASES = 10;
 	localparam CHECK_DELAY = 1; // Check 1ns after the rising edge to allow for propagation delay
 
-  //novopt issue
-	// Declare test bench signals
-	reg tb_tx_out;
+  	// Declare test bench signals
 	reg tb_clk;
 	reg tb_n_rst;
 	reg tb_start;
 	reg tb_done;
-	reg [1:0] tb_sda_mode;
-	reg tb_sda_out;
-	reg [3:0]tb_test_num;
-	//reg [3:0]i;
 	reg [NUM_BITS:0]tb_x1;
 	reg [NUM_BITS:0]tb_y1;
 	reg [NUM_BITS:0]tb_x2;
 	reg [NUM_BITS:0]tb_y2;
 
+	//Regs going to be used to show functionality
 	reg [NUM_BITS:0]tb_pubAX;
 	reg [NUM_BITS:0]tb_pubAY;
 
@@ -51,8 +46,25 @@ module tb_point_multiplication
 
 	reg [NUM_BITS:0]tb_k;
 	integer i;
+	integer tb_test_num;
 
+	//Private keys of the 2 users
+	reg [NUM_BITS:0] privA = 164'h5;
+	reg [NUM_BITS:0] privB = 164'd15;
 
+	//The generator element that will be used by ECC to generate the public key. This value was provided by NIST
+	reg genX = 164'h3f0eba16286a2d57ea0991168d4994637e8343e36;
+	reg genY = 165'h0d51fbc6c71a0094fa2cdd545b11c5c0c797324f1;
+	
+	//The correct session key and public key values got using python
+	reg [NUM_BITS:0] correctSesX = 164'h129e4d24d07531e5c99ffad67da9005631c44b61a;
+	reg [NUM_BITS:0] correctSesY = 164'h4927babad5319b9941617be017a7ee92a188ce39c;
+	reg [NUM_BITS:0] correctPubAX = 164'h092170d7458ced62a775e2f85c1cd70cd63a70c81;
+	reg [NUM_BITS:0] correctPubAY = 164'h72294e7900b1cd6f1f8e5766d4217d61884ca79aa;
+	reg [NUM_BITS:0] correctPubBX = 164'h0579ee5f7d26ba2fdf3a68c9a0832b0fa52213fd1;
+	reg [NUM_BITS:0] correctPubBY = 164'h45814fea6e93d1df4c85e9b4f9f53fa2bd39cc3c3;
+
+	//Clock setup
 	always
 	begin
 		tb_clk = 1'b0;
@@ -61,23 +73,6 @@ module tb_point_multiplication
 		#(CLK_PERIOD/2.0);
 	end
 
-	//integer tb_test_num;
-
-/*#(
-		.NUM_BITS(8),
-		.NUM_SHIFTS(2)
-	)	*/ 
-
-
-	/*x1,
-	input wire [NUM_BITS:0] y1,
-	input wire [NUM_BITS:0] x2,
-	input wire [NUM_BITS:0] y2,
-	output wire [NUM_BITS:0] x3,
-	output wire [NUM_BITS:0] y3,
-
-	input wire start,
-	output wire done */
 	// DUT Port maps
 	point_multiplication DUT(.clk(tb_clk), .n_rst(tb_n_rst), .x(tb_x1), .y(tb_y1), .SkX(tb_x2), .SkY(tb_y2),.k(tb_k), .start(tb_start), .done(tb_done));
 
@@ -85,17 +80,19 @@ module tb_point_multiplication
 	// Test bench process
 	initial
 	begin
-		//tb_x1 = 9'b000000011;
-		//tb_y1 = 9'b000000011;
-		tb_k = 5;
-		//tb_x1 = {1'b0, 1'b1, 1'b1, 153'b0, 1'b1, 1'b1, 2'b0, 1'b1, 2'b0, 1'b1};
-		//tb_y1 = 165'b11;
-	
-		tb_x1 = 164'h3f0eba16286a2d57ea0991168d4994637e8343e36;
-		tb_y1 = 165'h0d51fbc6c71a0094fa2cdd545b11c5c0c797324f1;
 
+		//Initial k value
+		tb_k = privA;
+	
+		//Initial x,y value
+		tb_x1 = genX;
+		tb_y1 = genY;
+
+		//Initial start value
 		tb_start = 0;
 
+		//Initial test number set to 0
+		tb_test_num = 0;
 
 		// Power-on Reset of the DUT
 		#(0.1);
@@ -106,42 +103,78 @@ module tb_point_multiplication
 		// Wait for a while to see normal operation
 		#(CLK_PERIOD);
 
-		//Test Case
+		//Test Case 1 
+		//This test case does a whole diffe helman key exchange, starting by calculating the first public key, then the second public key
+		//Followed by the 2 session keys, the 2 session keys should be the same
+		tb_test_num += 1;
+
+		$info("Test case %d \n", tb_test_num);
+		$info("Starting Calculation of A's Public Key");
+
 		@(negedge tb_clk);
 		@(negedge tb_clk);
 		tb_start = 1;
 		@(negedge tb_clk);
 		tb_start = 0;
 
-		@(posedge tb_done);
-		$info("First mult done");
-		@(negedge tb_clk);	
-		@(negedge tb_clk);	
-		/*for(i=0; i < 25000; i++)
+		//Waits till it gets a 1 from tb_done, this will indicate that the first point mult is done
+		while(1)
 		begin
-			@(negedge tb_clk);	
-		end*/
+			@(posedge tb_done);
+			#(CHECK_DELAY);
+
+			if (tb_done == 1'b1)
+			begin
+				$info("A's Public Key Generation Completed");
+				break;
+			end 
+		end
+		@(negedge tb_clk);	
+		@(negedge tb_clk);	
+
+		//Store the public key values
 		tb_pubAX = tb_x2;
 		tb_pubAY = tb_y2;
 
-		tb_k = 15;
+		//Checks if the correct public key value is generated
+		if((correctPubAX == tb_pubAX) && (correctPubAY == tb_pubAY))
+			$info("Correct Public keys generated for A");
+		else
+			$error("Incorrect Public keys generated for A");
+
+
+		//Does the second point mult which does the calculation of B's public key
+		$info("Starting Calculation of B's Public Key");
+		tb_k = privB;
 		@(negedge tb_clk);
 		tb_start = 1;
 		@(negedge tb_clk);
 		tb_start = 0;
 
-		@(posedge tb_done);
-		$info("Second mult done");
-		@(negedge tb_clk);	
-		@(negedge tb_clk);	
-		/*for(i=0; i < 25000; i++)
+		//Waits till it gets a 1 from tb_done, this will indicate that the second point mult is done
+		while(1)
 		begin
-			@(negedge tb_clk);
-		end*/
+			@(posedge tb_done);
+			#(CHECK_DELAY);
+
+			if (tb_done == 1'b1)
+			begin
+				$info("B's Public Key Generation Completed");
+				break;
+			end 
+		end
+		@(negedge tb_clk);	
+		@(negedge tb_clk);	
+
 		tb_pubBX = tb_x2;
 		tb_pubBY = tb_y2;
 
+		if((correctPubBX == tb_pubBX) && (correctPubBY == tb_pubBY))
+			$info("Correct Public keys generated for B");
+		else
+			$info("Incorrect Public keys generated for B");
 
+		$info("Starting Third mult");
 		tb_x1 = tb_pubAX;
 		tb_y1 = tb_pubAY;
 		@(negedge tb_clk);
@@ -149,49 +182,80 @@ module tb_point_multiplication
 		@(negedge tb_clk);
 		tb_start = 0;
 
-		/*for(i=0; i < 25000; i++)
+		//Waits till it gets a 1 from tb_done, this will indicate that the third point mult is done
+		while(1)
 		begin
-			@(negedge tb_clk);
-		end*/
-		@(posedge tb_done);
-		$info("Third mult done");
-		@(negedge tb_clk);	
-		@(negedge tb_clk);	
+			@(posedge tb_done);
+			#(CHECK_DELAY);
+
+			if (tb_done == 1'b1)
+			begin
+				$info("B's Public Key Generation Completed");
+				break;
+			end 
+		end
 
 		tb_sesPubAPrivBX = tb_x2;
 		tb_sesPubAPrivBY = tb_y2;
+
+		$info("Third mult done");
+		if((correctSesX == tb_sesPubAPrivBX) && (correctPubBY == tb_sesPubAPrivBY))
+			$info("Correct Public keys generated for B");
+		else
+			$info("Incorrect Public keys generated for B");
+
+		@(negedge tb_clk);	
+		@(negedge tb_clk);	
+
 		tb_x1 = tb_pubBX;
 		tb_y1 = tb_pubBY;
 		tb_k = 5;
 		
+		$info("Starting Fourth mult");
 		@(negedge tb_clk);
 		tb_start = 1;
 		@(negedge tb_clk);
 		tb_start = 0;
 
-/*		for(i=0; i < 25000; i++)
-		begin
-			@(negedge tb_clk);
-		end
-*/
 
-		@(posedge tb_done);
-		$info("Fourth mult done");
-		@(negedge tb_clk);	
-		@(negedge tb_clk);	
+		//Waits till it gets a 1 from tb_done, this will indicate that the fourth point mult is done
+		while(1)
+		begin
+			@(posedge tb_done);
+			#(CHECK_DELAY);
+
+			if (tb_done == 1'b1)
+			begin
+				$info("B's Public Key Generation Completed");
+				break;
+			end 
+		end
+
 		tb_sesPubBPrivAX = tb_x2;
 		tb_sesPubBPrivAY = tb_y2;
+		$info("Fourth mult done");
+
+		if((correctSesX == tb_sesPubBPrivAX) && (correctPubBY == tb_sesPubBPrivAY))
+			$info("Correct Public keys generated for B");
+		else
+			$info("Incorrect Public keys generated for B");
+
+		@(negedge tb_clk);	
+		@(negedge tb_clk);	
+
+		if((correctSesX == tb_sesPubAPrivBX) && (correctSesY == tb_sesPubAPrivBY))
+			$info("Correct session keys generated");
+		else
+			$info("Incorrect session keys generated");
 
 		if((tb_sesPubBPrivAX == tb_sesPubAPrivBX) && (tb_sesPubBPrivAY == tb_sesPubAPrivBY))
 		begin
-			$info("Correct Session Keys YESSSSSSSSSSSS!");
+			$info("Session Keys Match for both Parties");
 		end
 		else
 		begin	
-			$error("Incorrect value BLAHHH");
+			$info("Session Keys no not match");
 		end
-		//tb_A = {1'b0, 1'b1, 1'b1, 153'b0, 1'b1, 1'b1, 2'b0, 1'b1, 2'b0, 1'b1};
-		//tb_B = 165'b11;
 	end
 
 

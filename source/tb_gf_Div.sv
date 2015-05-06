@@ -21,13 +21,10 @@ module tb_gf_Div
 
   //novopt issue
 	// Declare test bench signals
-	reg tb_tx_out;
 	reg tb_clk;
 	reg tb_n_rst;
 	reg tb_ready;
 	reg tb_done;
-	reg [1:0] tb_sda_mode;
-	reg tb_sda_out;
 	reg [3:0]tb_test_num;
 	reg [3:0]i;
 	reg [NUM_BITS:0]tb_A;
@@ -44,12 +41,6 @@ module tb_gf_Div
 		#(CLK_PERIOD/2.0);
 	end
 
-	//integer tb_test_num;
-
-/*#(
-		.NUM_BITS(8),
-		.NUM_SHIFTS(2)
-	)	*/ 
 	// DUT Port maps
 	gf_Div DUT(.clk(tb_clk), .n_rst(tb_n_rst), .A(tb_A), .B(tb_B), .start(tb_ready),  .Q(tb_Q), .done(tb_done));
 
@@ -57,8 +48,6 @@ module tb_gf_Div
 	// Test bench process
 	initial
 	begin
-		//tb_A = 9'b010000111;
-		//tb_B = 9'b000000011;
 		tb_A = {1'b0, 1'b1, 1'b1, 153'b0, 1'b1, 1'b1, 2'b0, 1'b1, 2'b0, 1'b1};
 		tb_B = 165'd60;
 	
@@ -80,8 +69,9 @@ module tb_gf_Div
 		tb_ready = 1;
 		@(negedge tb_clk);
 		tb_ready = 0;
-		//tb_A = {1'b0, 1'b1, 1'b1, 153'b0, 1'b1, 1'b1, 2'b0, 1'b1, 2'b0, 1'b1};
-		//tb_B = 165'b11;
+		@(negedge tb_clk);
+		@(negedge tb_clk);
+
 	end
 
 

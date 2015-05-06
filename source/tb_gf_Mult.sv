@@ -18,26 +18,18 @@ module tb_gf_Mult
 	localparam NUM_TEST_CASES = 10;
 	localparam CHECK_DELAY = 1; // Check 1ns after the rising edge to allow for propagation delay
 
-  //novopt issue
 	// Declare test bench signals
 	reg tb_tx_out;
 	reg tb_clk;
 	reg tb_n_rst;
 	reg tb_ready;
-	reg [1:0] tb_sda_mode;
-	reg tb_sda_out;
 	reg [3:0]tb_test_num;
 	reg [3:0]i;
 	reg [NUM_BITS:0]tb_A;
 	reg [NUM_BITS:0]tb_B;
 	reg [NUM_BITS:0]tb_product;
 	reg tb_done;
-	//integer tb_test_num;
 
-/*#(
-		.NUM_BITS(8),
-		.NUM_SHIFTS(2)
-	)	*/
 	// DUT Port maps
 	gf_Mult DUT(.A(tb_A), .B(tb_B), .Product(tb_product), .start(tb_ready), .clk(tb_clk), .n_rst(tb_n_rst), .done(tb_done));
 
@@ -51,22 +43,9 @@ module tb_gf_Mult
 
 	// Test bench process
 	initial
-	begin
-		/*tb_A = 9'b010000100;
-		tb_B = 9'b000000011;
-		
-		#(20);
-
-		tb_A = 9'b011111111;
-		tb_B = 9'b011111111;
-*/
-		//tb_A = {1'b0, 1'b1, 1'b1, 153'b0, 1'b1, 1'b1, 2'b0, 1'b1, 2'b0, 1'b1};
-		//tb_B = {1'b0, 1'b1, 157'b0, 2'b0, 1'b1, 1'b0, 1'b1};
-		//tb_A = {1'b0, 1'b1, 1'b1, 153'b0, 1'b1, 1'b1, 2'b0, 1'b1, 2'b0, 1'b1};
-		
+	begin		
 		tb_A = 164'h10101010000;
 		tb_B = 164'h50005000;
-		//tb_B = 165'd60;
 	
 		tb_ready = 0;
 

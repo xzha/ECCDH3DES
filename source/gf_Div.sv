@@ -8,7 +8,7 @@
 
 module gf_Div
 #(
-	parameter NUM_BITS = 163 //////////////////////////////////
+	parameter NUM_BITS = 163 
 )
 (
 	input wire clk,
@@ -18,34 +18,17 @@ module gf_Div
   input wire start,
   output reg [NUM_BITS:0] Q,
   output reg done
-
-  //input wire [NUM_BITS:0] Amul,
-  //input wire [NUM_BITS:0] Bmul,
-
-  //output reg [NUM_BITS:0] outMul;
 );
-
-//reg [NUM_BITS:0][NUM_BITS:0] midVal;
-//reg [NUM_BITS:0][NUM_BITS:0] midVal2;
-//reg [NUM_BITS:0][NUM_BITS:0] midVal3;
-//reg [NUM_BITS:0][NUM_BITS:0] midVal5;
-//logic [NUM_BITS:0] poly;
-//logic rollover_flag;
-//reg [NUM_BITS:0]Bto32;
-//assign poly = 9'b100011011; //For easy 8 poly
-//assign poly = {1'b1, 155'b0, 1'b1, 1'b1, 2'b0, 1'b1, 2'b0, 1'b1}; //For the proper 163 poly  163,7,6,3,0 //////////////////////////////////
-
 
 typedef enum logic [4:0] {IDLE, GETDATA, DIVIDE, SQUARE1, SQUARE2, SQUARE3, SQUARE4, SQUARE5, SQUARE6, SQUARE7, SQUARE8, SQUARE9, SQUARE10, SQUARE11, MULT1, MULT2, MULT3, MULT4, MULT5, FINALMULT, DONE} state_type;
 state_type state, nextstate;
 
-logic [NUM_BITS:0] out1, next_out1;
+logic [NUM_BITS:0] next_out1;
 logic [NUM_BITS:0] next_inA, inA;
 logic [NUM_BITS:0] next_inB, inB;
 logic [NUM_BITS:0] next_inC, inC;
-logic [NUM_BITS:0] next_inD, inD;
+logic [NUM_BITS:0] next_inD;
 logic [NUM_BITS:0] next_Q;
-logic next_start;
 logic mul_start;
 logic mul_done;
 logic count_start;
@@ -53,43 +36,29 @@ logic count_done;
 logic count_clear;
 logic [8:0] rollover_val;
 logic [8:0] count_out;
-logic next_mulDoneReg, mulDoneReg;
+
+//Flipflop logic
 always_ff @(posedge clk, negedge n_rst)
 begin: StateReg
 if(n_rst == 0)
   begin
-	state <= IDLE;
+	  state <= IDLE;
     Q <= 0;
-    out1 <= 0;
     inA <= 0;
     inB <= 0;
     inC <= 0;
-    inD <= 0;
-    mulDoneReg <= 0;
-    next_start <= 0;
   end
 	else 
   begin
     state <= nextstate;
-    //if(done == 0)
     Q <= next_Q;
-    next_start <= start;
-    out1 <= next_out1;
     inA <= next_inA;
     inB <= next_inB;
     inC <= next_inC;
-    inD <= next_inD;
-    mulDoneReg <= next_mulDoneReg;
   end
 end 
 
-//8-4 = 4, 163-4 = 159
-gf_Square Square(.A(inA), .Squared(next_out1));
-gf_Mult Mult(.clk(clk), .n_rst(n_rst), .A(inB), .B(inC), .start(mul_start), .done(mul_done), .Product(next_inD));
-flex_counter #(9) count1(.clk(clk), .n_rst(n_rst), .clear(count_done | count_clear), .count_out(count_out),  .count_enable(count_start), .rollover_val(rollover_val), .rollover_flag(count_done));
-//gf_Mult Mult3(D, D, out2);
-//gf_Mult Mult4(out2, A, next_Q);
-
+//Next State logic
 always_comb begin : nextState
 	nextstate = state;
   done = 0;
@@ -99,17 +68,20 @@ always_comb begin : nextState
   next_inB = inB;
   next_inC = inC;
   rollover_val = 0;
-  next_mulDoneReg = mulDoneReg;
   count_clear = 0;
   count_start = 0;
-  //next_inD = inD;
-	case(state)
+
+  case(state)
+
+    //Goes to next state if start
 		IDLE: begin
 			if(start == 1)
 				nextstate = GETDATA;
 			else
 				nextstate = IDLE;
 		end
+
+    //Gets the data
     GETDATA: begin
 		  next_inA = B;
 		  next_inB = B;
@@ -122,10 +94,10 @@ always_comb begin : nextState
       next_inB = next_out1;
       nextstate = SQUARE2;
 		end
+
     //T=A^2
 		SQUARE2: begin
       next_inA = next_out1;
-      //next_inB = next_out1;
       next_inC = next_out1;
       nextstate = SQUARE3;
 		end
@@ -134,7 +106,6 @@ always_comb begin : nextState
       mul_start = 1;
       if(mul_done)
       begin
-        //next_inA = next_inD;
         next_inB = next_out1;
         next_inC = next_inD;        
         nextstate = MULT1;
@@ -149,8 +120,6 @@ always_comb begin : nextState
       if(mul_done)
       begin
         next_inA = next_inD;
-        //next_inB = next_out1;
-        //next_inC = next_inD;        
         nextstate = SQUARE5;
         count_clear = 1;
       end
@@ -185,7 +154,6 @@ always_comb begin : nextState
       count_start = 1;
       if(mul_done)
       begin
-        //next_inA = next_inD;
         next_inB = next_out1;
         next_inC = next_inD;        
         nextstate = MULT2;
@@ -206,8 +174,6 @@ always_comb begin : nextState
       if(mul_done)
       begin
         next_inA = next_inD;
-        //next_inB = next_out1;
-        //next_inC = next_inD;        
         nextstate = SQUARE7;
         count_clear = 1;
       end
@@ -235,10 +201,6 @@ always_comb begin : nextState
       end
 		end
 
-
-
-
-
     //A = A*T,  T = (T^2) ^ 9
 		SQUARE8: begin
       mul_start = 1;
@@ -246,7 +208,6 @@ always_comb begin : nextState
       count_start = 1;
       if(mul_done)
       begin
-        //next_inA = next_inD;
         next_inB = next_out1;
         next_inC = next_inD;        
         nextstate = MULT3;
@@ -266,8 +227,6 @@ always_comb begin : nextState
       if(mul_done)
       begin
         next_inA = next_inD;
-        //next_inB = next_out1;
-        //next_inC = next_inD;        
         nextstate = SQUARE9;
         count_clear = 1;
       end
@@ -307,7 +266,6 @@ always_comb begin : nextState
       count_start = 1;
       if(mul_done)
       begin
-        //next_inA = next_inD;
         next_inB = next_out1;
         next_inC = next_inD;        
         nextstate = MULT4;
@@ -327,8 +285,6 @@ always_comb begin : nextState
       if(mul_done)
       begin
         next_inA = next_inD;
-        //next_inB = next_out1;
-        //next_inC = next_inD;        
         nextstate = SQUARE11;
         count_clear = 1;
       end
@@ -352,8 +308,7 @@ always_comb begin : nextState
       else
       begin
         nextstate = SQUARE11;
-        //if(count_out <  80)  
-          next_inA = next_out1;
+        next_inA = next_out1;
       end
 		end
 
@@ -370,9 +325,6 @@ always_comb begin : nextState
 		end
 
 
-
-
-
     FINALMULT: begin
       mul_start = 1;
       if(mul_done)
@@ -384,6 +336,7 @@ always_comb begin : nextState
         nextstate = FINALMULT;
     end
 
+    //Set done signal
 		DONE: begin
 			nextstate = IDLE;
       done = 1;
@@ -392,6 +345,37 @@ always_comb begin : nextState
 
 end
 
+//Instantiation of the Square Block
+gf_Square Square
+  (
+    .A(inA), 
+    .Squared(next_out1)
+  );
+
+//Instantiation of the Mult Block
+gf_Mult Mult
+  (
+    .clk(clk), 
+    .n_rst(n_rst),
+    .A(inB), 
+    .B(inC), 
+    .start(mul_start), 
+    .done(mul_done), 
+    .Product(next_inD)
+  );
+
+
+//Instantiation of the Counter
+flex_counter #(9) count1
+  (
+    .clk(clk),
+    .n_rst(n_rst), 
+    .clear(count_done | count_clear), 
+    .count_out(count_out),  
+    .count_enable(count_start), 
+    .rollover_val(rollover_val), 
+    .rollover_flag(count_done)
+  );
 
 
 endmodule

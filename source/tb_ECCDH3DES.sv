@@ -72,7 +72,7 @@ module tb_ECCDH3DES
 
 	//Private keys of the 2 users
 	logic [NUM_BITS:0] privA = 164'h5;
-	logic [NUM_BITS:0] privB = 164'h15;
+	logic [NUM_BITS:0] privB = 164'd15;
 
 	//The generator element that will be used by ECC to generate the public key. This value was provided by NIST
 	logic [NUM_BITS:0]genX = 164'h3f0eba16286a2d57ea0991168d4994637e8343e36;
@@ -285,7 +285,7 @@ module tb_ECCDH3DES
 		$info("Starting Third mult");
 
 		tb_PX = tb_pubAX;
-		tb_PX = tb_pubAY;
+		tb_PY = tb_pubAY;
 		@(negedge tb_clk);
 		tb_ecc2_start = 1;
 		@(negedge tb_clk);
@@ -306,16 +306,43 @@ module tb_ECCDH3DES
 		@(negedge tb_clk);
 		@(negedge tb_clk);	
 
+
 		tb_sesPubAPrivBX = tb_PuX;
 		tb_sesPubAPrivBY = tb_PuY;
 		tb_des_start = 1;
+		
+		tb_raw_data = 64'h6465616462656566;
+		tb_data_valid_in = 1'b1;
 		@(negedge tb_clk);
+		tb_data_valid_in = 1'b0;
+		@(negedge tb_clk);	
+		
+		tb_raw_data = 16'h0;
+		tb_data_valid_in = 1'b1;
+		@(negedge tb_clk);
+		tb_data_valid_in = 1'b0;
 		@(negedge tb_clk);	
 	
 		for (i=0; i<20; i++)
 		begin
-			input_data(tb_input_block[current_test_case_index]);
+			//input_data(tb_input_block[current_test_case_index]);
 	    end
+
+
+		@(negedge tb_clk);
+		tb_des_start = 0;
+		@(negedge tb_clk);
+		while(1)
+		begin
+			@(posedge tb_des_done);
+			#(CHECK_DELAY);
+
+			if (tb_des_done == 1'b1)
+			begin
+				$info("DES DONE!!!!!");
+				break;
+			end 
+		end	
 	end
 
 

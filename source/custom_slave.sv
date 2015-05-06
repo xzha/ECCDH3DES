@@ -1,5 +1,5 @@
 // File name : custom_slave.sv
-// Author : Ishaan Biswas
+// Author : Xiong-Yao Zha
 // Created : 03/29/2015
 // Version 1.0 
 // Description : Demo example to illustrate slave interface usage
@@ -85,8 +85,6 @@ reg next_sramRE2;
 reg next_sramWE2;
 reg [SRAMWIDTH-1:0] next_output_data2;
 
-
-reg [REGWIDTH-1:0] fileSize;
 reg write_sram_start;
 
 reg des_done;
@@ -111,7 +109,6 @@ logic [NUMREGS-1:0][REGWIDTH-1:0] csr_registers;        // Command and Status Re
 
 
 // SRAM VARIABLES
-assign fileSize = csr_registers[41];
 assign write_sram_start = csr_registers[35][0];
 
 
@@ -141,14 +138,12 @@ always_ff @ ( posedge clk ) begin
         read_flag_1 <= 1'b0;
         read_flag_2 <= 1'b0;
 
+
     end else begin
 
         csr_registers[0][31] <= next_ecc1_done;
         csr_registers[0][25] <= next_ecc2_done;
-        csr_registers[0][24] <= next_des_done;
-        csr_registers[70][13:0] <=  (sram_Addr1 );
-        csr_registers[72][13:0] <=  (sram_Addr2 );
-
+        csr_registers[0][24] <= (csr_registers[41] == sram_Addr2);
 
         // OUTPUT KEY
         if(csr_registers[0][31])
@@ -167,7 +162,6 @@ always_ff @ ( posedge clk ) begin
             csr_registers[24]        <= PuX[35:4];
             csr_registers[25][31:28] <= PuX[3:0];
         end
-
 
         // STATE TRANSITION
         state <= next_state;
@@ -189,14 +183,12 @@ always_ff @ ( posedge clk ) begin
         read_flag_1 <= next_read_flag_1;
         read_flag_2 <= next_read_flag_2;
 
+
         // DEBUG
         csr_registers[50] = {18'b0, sram_Addr1};
         csr_registers[51] = {18'b0, sram_Addr2};
         csr_registers[52] = encrypted_data[63:32];
         csr_registers[53] = encrypted_data[31: 0];
-
-        // DEFAULT STATUS FOR SRAMS
-        csr_registers[45][0] = (sram_Addr2 < SRAM_ADDR2);
 
         // STATUS FOR SRAMS
         if (state == IDLE)
@@ -263,6 +255,7 @@ begin : STATE_TRANSITION
 
     next_read_flag_1 = 1'b0;
     next_read_flag_2 = 1'b0;
+
 
     case(state)
         IDLE:

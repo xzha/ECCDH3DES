@@ -11,31 +11,47 @@ module point_addition_doubling
 	parameter NUM_BITS = 163
 )
 (
+	// Input
 	input wire clk, 
 	input wire n_rst,
 
-	input wire [NUM_BITS:0] x, 
-	input wire [NUM_BITS:0] y,
+	// Input wires
+	input wire [NUM_BITS:0] x, // initial point
+	input wire [NUM_BITS:0] y, // initial point
 
-	input wire [NUM_BITS:0] x1,
-	input wire [NUM_BITS:0] z1,
+	input wire [NUM_BITS:0] x1, // projective coordinates
+	input wire [NUM_BITS:0] z1, // projective coordinates
 
-	input wire [NUM_BITS:0] x2,
-	input wire [NUM_BITS:0] z2,
+	input wire [NUM_BITS:0] x2, // projective coordinates
+	input wire [NUM_BITS:0] z2, // projective coordinates
 
-	input wire [NUM_BITS:0] b,
+	input wire [NUM_BITS:0] b, // constant
 
-	output reg [NUM_BITS:0] x3,
-	output reg [NUM_BITS:0] z3,
+	// Output wires
+	output reg [NUM_BITS:0] x3, // projective coordinates
+	output reg [NUM_BITS:0] z3, // projective coordinates
 
+	// Mode selection
 	input wire [1:0] mode,
+	/*
+		00 -> IDLE
+		01 -> ADDITION
+		10 -> MULTIPLICATION
+		11 -> CONVERSION FROM PROJECTIVE TO AFFIINE
+	*/
+
+	// Start signal
 	input wire start,
+
+	// Output signal
 	output wire done
 );
 
+	// States
 	typedef enum bit[5:0] {
 		IDLE,
 
+		// States for addition
 		A_M1,
 		A_M2,
 		A_A1,
@@ -44,6 +60,7 @@ module point_addition_doubling
 		A_M4,
 		A_A2,
 
+		// States for doubling
 		D_S1,
 		D_S2,
 		D_S3,
@@ -53,6 +70,7 @@ module point_addition_doubling
 		D_A1,
 		D_S5,
 
+		// States for conversion from projective to affine
 		M_D1,
 		M_M1,
 		M_A1,
@@ -71,6 +89,7 @@ module point_addition_doubling
 		M_M8,
 		M_A6,
 
+		// Done states
 		A_DONE,
 		D_DONE,
 		M_DONE,
@@ -78,6 +97,7 @@ module point_addition_doubling
 		DONE
 	} stateType;
 
+	// STATE VARIABLE
 	stateType state;
 	stateType next_state;
 
@@ -185,6 +205,7 @@ module point_addition_doubling
 		end
 	end
 
+	// Combinational block
 	always_comb
 	begin : NEXT_STATE
 		next_state = state;
@@ -206,6 +227,7 @@ module point_addition_doubling
 		next_x3 = x3;
 		next_z3 = z3;
 
+		// STATES to implement equations
 		case(state)
 			IDLE:
 			begin
@@ -584,10 +606,16 @@ module point_addition_doubling
 		endcase
 	end
 
+	// Start signal for Galois multiplication
 	assign m_start = (state == A_M1 || state == A_M2 || state == A_M3 || state == A_A1 || state == A_S1 || state == A_M4 || state == D_S1 || state == D_S2 || state == D_S3 || state == D_M1 || state == D_M2 || state == M_M1 || state == M_M2 || state == M_M3 || state == M_M4 || state == M_M5 || state == M_M6 || state == M_M7 || state == M_M8);
+	
+	// Start signal for Galois division
 	assign d_start = (state == M_D1 || state == M_D2);
+
+	// Done signal for Point Multiplication
 	assign done = (state == DONE);
 
+	// Galois arithmetics
 	gf_Add 
 	#(
 		.NUM_BITS(NUM_BITS)

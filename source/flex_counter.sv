@@ -1,7 +1,7 @@
 // $Id: $
 // File name:   flex_counter.sv
 // Created:     1/28/2015
-// Author:      Ed Zha
+// Author:      Xiong-Yao Zha
 // Lab Section: 337-03
 // Version:     1.0  Initial Design Entry
 // Description: Flexible and Scalable Counter with Controlled Rollover.
@@ -11,21 +11,26 @@ module flex_counter
 	parameter NUM_CNT_BITS = 4
 )
 (
+	// Input
 	input wire clk,
 	input wire n_rst,
 	input wire clear,
 	input wire count_enable,
 	input wire [(NUM_CNT_BITS - 1) : 0] rollover_val,
+
+	// Output
 	output wire [(NUM_CNT_BITS - 1) : 0] count_out,
 	output reg rollover_flag
 );
 
+// Count value
 reg [(NUM_CNT_BITS - 1) : 0] count;
 reg [(NUM_CNT_BITS - 1) : 0] next_count;
 reg next_rollover_flag;
 
 assign count_out = count;
 	
+// Flip flop
 always_ff @ (posedge clk, negedge n_rst) 
 begin:CT
 	if (1'b0 == n_rst)
@@ -40,6 +45,7 @@ begin:CT
 	end
 end	
 
+// Combinational
 always_comb
 begin : LOGIC
 	next_count = count;

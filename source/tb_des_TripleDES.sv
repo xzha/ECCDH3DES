@@ -82,7 +82,7 @@ module tb_des_TripleDES
 
 	// !!! NOTE: if running in source, the posedge below must be changed to negedge !!! // 	
 
-	always @ (posedge tb_clk)
+	always @ (negedge tb_clk)
 	begin
 		if (tb_data_valid_out == 1)
 		begin

@@ -1,3 +1,9 @@
+// File name : main.c
+// Author : Xiong-Yao Zha, Manish Gupta
+// Created : 03/29/2015
+// Version 1.0 
+// Description : Main function that interfaces all the functionalities of the ECCDH3DES
+
 #include "ECCDH3DES.h"
 
 char convert_Option(char * option)
@@ -160,6 +166,8 @@ int main(int argc, char * argv[])
 	{	
 		int i;
 		int r;
+		
+		srand(time(NULL));
 
 		FILE * fp = fopen(argv[2], "w");
 		

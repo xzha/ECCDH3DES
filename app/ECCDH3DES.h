@@ -1,3 +1,9 @@
+// File name : ECCDH3DES.h
+// Author : Xiong-Yao Zha, Manish Gupta
+// Created : 03/29/2015
+// Version 1.0 
+// Description : Base functions for FPGA interface
+
 #ifndef ECCDH3DES_H
 #define ECCDH3DES_H
 
@@ -7,6 +13,7 @@
 #include <memory.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <time.h>
 
 #include "PCIE.h"
 

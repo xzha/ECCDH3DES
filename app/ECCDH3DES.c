@@ -1,3 +1,9 @@
+// File name : ECCDH3DES.c
+// Author : Xiong-Yao Zha, Manish Gupta
+// Created : 03/29/2015
+// Version 1.0 
+// Description : Base functions for FPGA interface
+
 #include "ECCDH3DES.h"
 
 

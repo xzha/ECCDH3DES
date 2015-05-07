@@ -8,16 +8,10 @@ Documentation for the hardware design can be found in the docs folder.
 
 
 Team Members:
-
 Nico Bellante
-
 
 Lucas Dahl
 
-
 Manish Gupta
 
-
 Xiong-Yao Zha
-
-

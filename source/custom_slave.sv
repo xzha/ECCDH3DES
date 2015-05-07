@@ -1,5 +1,5 @@
 // File name : custom_slave.sv
-// Author : Xiong-Yao Zha
+// Author : Xiong-Yao Zha, Manish Gupta
 // Created : 03/29/2015
 // Version 1.0 
 // Description : Demo example to illustrate slave interface usage

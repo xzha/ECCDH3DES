@@ -227,6 +227,7 @@ if __name__ == "__main__":
         raise Exception
 
     if generate:
+        i = 0
         sys.argv[1] = './inputblock_{0}.txt'.format(i)
         sys.argv.append('-t')
         sys.argv.append('./outputofdes_{0}.txt'.format(i))

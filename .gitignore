@@ -10,3 +10,17 @@ source_work
 transcript
 *.?comp
 *.?tran
+*.o
+*.qws
+*.tcl
+*.txt
+*.rpt
+*.sopcinfo
+
+.qsys_edit/
+
+# FPGA subdirectories
+fpga/avalon_system/
+fpga/db
+fpga/incremental_db/
+

@@ -1,0 +1,18 @@
+Analysis & Synthesis Status : Successful - Tue Mar 15 20:16:15 2016
+Quartus II 64-Bit Version : 14.0.0 Build 200 06/17/2014 SJ Full Version
+Revision Name : ECCDH3DES
+Top-level Entity Name : system_fpga
+Family : Cyclone IV GX
+Total logic elements : 58,138
+    Total combinational functions : 46,322
+    Dedicated logic registers : 24,841
+Total registers : 24841
+Total pins : 168
+Total virtual pins : 0
+Total memory bits : 2,189,032
+Embedded Multiplier 9-bit elements : 0
+Total GXB Receiver Channel PCS : 1
+Total GXB Receiver Channel PMA : 1
+Total GXB Transmitter Channel PCS : 1
+Total GXB Transmitter Channel PMA : 1
+Total PLLs : 2

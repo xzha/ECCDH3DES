@@ -12,11 +12,10 @@ transcript
 *.?tran
 *.o
 *.qws
-*.tcl
 *.txt
 *.rpt
 *.sopcinfo
-
+*.bak
 .qsys_edit/
 
 # FPGA subdirectories

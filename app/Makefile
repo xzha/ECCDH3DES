@@ -8,14 +8,8 @@ TARGET = main
 
 build: $(TARGET)
 
-main : $(OBJS) $(HDRS) 
+main : $(OBJS) $(HDRS) | environment
 	$(GCC) $(CFLAGS) $(OBJS) -o $@ -ldl
-
-test_encrypt: $(TARGET) | environment
-	./$(TARGET) -e pri_key/pri_*.txt pub_key_external/pub_*.txt ./test_input.txt cipher_text/test_encrypted.txt
-
-test_decrypt: $(TARGET) | environment
-	./$(TARGET) -d pri_key/pri_*.txt pub_key_external/pub_*.txt cipher_text/test_encrypted.txt plain_text/test_plain.txt
 
 environment:
 	@mkdir -p pri_key
@@ -23,14 +17,16 @@ environment:
 	@mkdir -p pub_key_external
 	@mkdir -p plain_text
 	@mkdir -p cipher_text
+	@echo "This is an unusual paragraph. I'm curious as to just how quickly you can find out what is so unusual about it. It looks so ordinary and plain that you would think nothing was wrong with it. In fact, nothing is wrong with it! It is highly unusual though. Study it and think about it, but you still may not find anything odd. But if you work at it a bit, you might find out. Try to do so without any coaching." > test_input.txt
 
 .c.o:
 	$(GCC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(TARGET) *.a *.o *~
+	rm -rf pri_key/
 	rm -rf pub_key_local/
 	rm -rf pub_key_external/
-	rm -rf pri_key/
 	rm -rf cipher_text/
 	rm -rf plain_text/
+	rm -f test_input.txt

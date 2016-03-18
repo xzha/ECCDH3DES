@@ -4,6 +4,13 @@ module system_fpga (
   
   /////////// KEY ///////////
   input logic [3:0] KEY,
+  
+  //////////// SW ///////////
+  input logic [17:0] SW,
+  
+  /////////// LED ///////////
+  output logic [3:0] LEDG,
+  output logic [17:0] LEDR,
 
   /////////// HEX ///////////
   output logic [6:0] HEX0,
@@ -30,6 +37,19 @@ module system_fpga (
 
   // wake up pcie
   assign PCIE_WAKE_N = 1'b1;
+  
+  // make board pretty
+  assign LEDG[0] = ~KEY[0];
+  assign LEDR[17:0] = SW[17:0];
+  
+  assign HEX7 = 7'b0000110; //E
+  assign HEX6 = 7'b1000110; //C
+  assign HEX5 = 7'b1000110; //C
+  assign HEX4 = 7'b1111111; // 
+  assign HEX3 = 7'b0110000; //3
+  assign HEX2 = 7'b0100001; //D
+  assign HEX1 = 7'b0000110; //E
+  assign HEX0 = 7'b0010010; //S
 
   // avalon bus
   avalon_system u0 (

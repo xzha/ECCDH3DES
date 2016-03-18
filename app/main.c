@@ -5,17 +5,40 @@
 // Description : Main function that interfaces all the functionalities of the ECCDH3DES
 
 #include "ECCDH3DES.h"
-#define OPTION argv[1][1]
+
+char convert_Option(char * option)
+{
+	if (option[0] != '-')
+	{
+		printf("First argument must be a flag\n");
+		return -1;
+	}
+
+	switch(option[1])
+	{
+		case 'h' : return 0;
+		case 'g' : return 1;
+		case 'd' : return 2;
+		case 'e' : return 3;
+		case 'r' : return 4;
+		default  : return -1;
+	}
+
+	return -1;
+}
 
 int main(int argc, char * argv[])
 {
 
 	//Check if correct argument set is passed in
-	if( (argc < 2) || (argv[1][0] != '-') )
+	if(argc < 2)
 	{
 		printf("Usage: ./main -h for help\n");
 		return 1;
 	}
+	
+	// Input option
+	char option = convert_Option(argv[1]);
 
 	// Set up PCIE
 	void * lib_handle;
@@ -36,7 +59,7 @@ int main(int argc, char * argv[])
 	}
 
 	// Perform requestion option
-	if( (OPTION == 'h') && (argc == 2) )
+	if( (option == 0) && (argc == 2) )
 	{
 		printf("To generate Public Key:\n");
 		printf("\t./main -g <input>.txt <output>.txt\n");
@@ -52,26 +75,8 @@ int main(int argc, char * argv[])
 		printf("\t./main -r <output>.txt\n");
 		return 1;	
 	}
-	// generate private key
-	else if ( (OPTION == 'r') && (argc == 3) )
-	{	
-		int i;
-		int r;
-		
-		srand(time(NULL));
 
-		FILE * fp = fopen(argv[2], "w");
-		
-		for (i = 0; i < 41; i ++)
-		{
-			r = rand() % 16;
-			fprintf(fp, "%1x", r);
-		}
-
-		fclose(fp);
-	}
-	// generate public key
-	else if ( (OPTION == 'g') && (argc == 4) )
+	else if ( (option == 1) && (argc == 4) )
 	{
 	
 		// X_1
@@ -93,7 +98,7 @@ int main(int argc, char * argv[])
 		read_Key_File(fin, pri);
 
 
-		printf("----------------------GET PUBLIC KEY----------------------\n");
+		printf("Generating public key...\n");
 
 		get_Public_Keys(hPCIe, x_1, y_1, pri, pub_x, pub_y);
 
@@ -110,8 +115,8 @@ int main(int argc, char * argv[])
 		fclose(fin);
 		fclose(fout);
 	}
-	// decrypt or encrypt
-	else if ( (OPTION == 'd' || OPTION == 'e') && (argc == 6) )
+
+	else if ( (option == 2 || option == 3) && (argc == 6) )
 	{
 		// PRI
 		DWORD * pri = malloc(sizeof(DWORD) * (6));
@@ -131,11 +136,7 @@ int main(int argc, char * argv[])
 		fgetc(fin2);
 		read_Key_File(fin2, pub_y);
 
-		print_164bits(pub_x);
-		print_164bits(pub_y);
-		print_164bits(pri);
-
-		printf("------------------GENERATE SESSION KEYS-------------------\n");
+		printf("Generating session keys...\n");
 
 		generate_Session_Keys(hPCIe, pub_x, pub_y, pri);
 		
@@ -143,10 +144,10 @@ int main(int argc, char * argv[])
 		FILE * fin3 = fopen(argv[4], "rb");
 		FILE * fout = fopen(argv[5], "w");
 
-		printf("---------------------------DES---------------------------\n");
+		printf("Performing 3DES...\n");
 
 		// DES
-		des(hPCIe, fin3, fout, OPTION == 'e');
+		des(hPCIe, fin3, fout, option - 2);
 
 		free(pri);
 		free(pub_x);
@@ -157,6 +158,26 @@ int main(int argc, char * argv[])
 		fclose(fout);
 	}
 	
+	else if ( (option == 4) && (argc == 3) )
+	{	
+		int i;
+		int r;
+		
+		srand(time(NULL));
+
+		FILE * fp = fopen(argv[2], "w");
+		
+		printf("Generating private key...\n");
+		
+		for (i = 0; i < 41; i ++)
+		{
+			r = rand() % 16;
+			fprintf(fp, "%1x", r);
+		}
+
+		fclose(fp);
+	}
+
 	else
 	{
 		printf("Usage: ./main -h for help\n");

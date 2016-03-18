@@ -4,7 +4,6 @@
 // Version 1.0 
 // Description : FPGA wrapper for ECCDH3DES chip on the Avalon Bus.
 
-
 module ECCDH3DES_fpga #(
     parameter SLAVE_ADDRESSWIDTH = 8 ,      // ADDRESSWIDTH specifies how many addresses the slave needs to be mapped to. log(NUMREGS)
     parameter DATAWIDTH = 32,               // DATAWIDTH specifies the data width. Default 32 bits
@@ -26,7 +25,6 @@ module ECCDH3DES_fpga #(
     output logic [DATAWIDTH-1:0] slave_readdata
 );
 
-
 typedef enum {IDLE, WRITE_INPUT, READ_OUTPUT } state_t;
 state_t state, next_state;
 
@@ -40,39 +38,38 @@ logic next_ecc1_done;
 logic next_ecc2_done;
 logic next_des_done;
 
-reg [SRAMWIDTH-1:0] input_data1;
-reg [ADDRSIZE-1:0] sram_Addr1;
-reg sramRE1;
-reg sramWE1;
-reg [SRAMWIDTH-1:0] output_data1;
+logic [SRAMWIDTH-1:0] input_data1;
+logic [ADDRSIZE-1:0] sram_Addr1;
+logic sramRE1;
+logic sramWE1;
+logic [SRAMWIDTH-1:0] output_data1;
 
-reg [SRAMWIDTH-1:0] next_input_data1;
-reg [ADDRSIZE-1:0] next_sram_Addr1;
-reg next_sramRE1;
-reg next_sramWE1;
-reg [SRAMWIDTH-1:0] next_output_data1;
+logic [SRAMWIDTH-1:0] next_input_data1;
+logic [ADDRSIZE-1:0] next_sram_Addr1;
+logic next_sramRE1;
+logic next_sramWE1;
+logic [SRAMWIDTH-1:0] next_output_data1;
 
-reg [SRAMWIDTH-1:0] input_data2;
-reg [ADDRSIZE-1:0] sram_Addr2;
-reg sramRE2;
-reg sramWE2;
-reg [SRAMWIDTH-1:0] output_data2;
+logic [SRAMWIDTH-1:0] input_data2;
+logic [ADDRSIZE-1:0] sram_Addr2;
+logic sramRE2;
+logic sramWE2;
+logic [SRAMWIDTH-1:0] output_data2;
 
+logic [SRAMWIDTH-1:0] next_input_data2;
+logic [ADDRSIZE-1:0] next_sram_Addr2;
+logic next_sramRE2;
+logic next_sramWE2;
+logic [SRAMWIDTH-1:0] next_output_data2;
 
-reg [SRAMWIDTH-1:0] next_input_data2;
-reg [ADDRSIZE-1:0] next_sram_Addr2;
-reg next_sramRE2;
-reg next_sramWE2;
-reg [SRAMWIDTH-1:0] next_output_data2;
+logic write_sram_start;
 
-reg write_sram_start;
+logic des_done;
 
-reg des_done;
-
-reg read_flag_1;
-reg read_flag_2;
-reg next_read_flag_1;
-reg next_read_flag_2;
+logic read_flag_1;
+logic read_flag_2;
+logic next_read_flag_1;
+logic next_read_flag_2;
 
 logic [63:0] next_actual_data;
 logic [63:0] actual_data;
@@ -84,8 +81,8 @@ parameter STOP_BYTE = 32'hDEADF00B;
 parameter SRAM_ADDR = 32'h1;
 parameter SRAM_ADDR2 = 32'h1;
 
-// GIVEN
-logic [NUMREGS-1:0][REGWIDTH-1:0] csr_registers;        // Command and Status Registers (CSR) for custom logic
+// Command and Status Registers (CSR) for custom logic
+logic [NUMREGS-1:0][REGWIDTH-1:0] csr_registers; 
 
 // SRAM VARIABLES
 assign write_sram_start = csr_registers[35][0];
@@ -121,9 +118,11 @@ always_ff @ ( posedge clk ) begin
 
         csr_registers[0][31] <= next_ecc1_done;
         csr_registers[0][25] <= next_ecc2_done;
+
+        // des done signal
         csr_registers[0][24] <= (csr_registers[41] == sram_Addr2);
 
-        // OUTPUT KEY
+        // copy public keys
         if(csr_registers[0][31])
         begin
             csr_registers[26]        <= PuY[163:132];
@@ -141,59 +140,57 @@ always_ff @ ( posedge clk ) begin
             csr_registers[25][31:28] <= PuX[3:0];
         end
 
-        // STATE TRANSITION
+        // state transition
         state <= next_state;
 
-        sram_Addr1 <= next_sram_Addr1;
+        // update sram1
+        sram_Addr1  <= next_sram_Addr1;
         input_data1 <= next_input_data1;
-        sramWE1 <= next_sramWE1;
-        sramRE1 <= next_sramRE1;
+        sramWE1     <= next_sramWE1;
+        sramRE1     <= next_sramRE1;
 
-        sram_Addr2 <= next_sram_Addr2;
+        // update sram2
+        sram_Addr2  <= next_sram_Addr2;
         input_data2 <= next_input_data2;
-        sramWE2 <= next_sramWE2;
-        sramRE2 <= next_sramRE2;
-
-        data_valid_in <= next_data_valid_in;
+        sramWE2     <= next_sramWE2;
+        sramRE2     <= next_sramRE2;
 
         actual_data <= next_actual_data;
+        data_valid_in <= next_data_valid_in;
 
         read_flag_1 <= next_read_flag_1;
         read_flag_2 <= next_read_flag_2;
 
+        // debug registers
+        csr_registers[50] <= {18'b0, sram_Addr1};
+        csr_registers[51] <= {18'b0, sram_Addr2};
+        csr_registers[52] <= encrypted_data[63:32]; 
+        csr_registers[53] <= encrypted_data[31: 0];
 
-        // DEBUG
-        csr_registers[50] = {18'b0, sram_Addr1};
-        csr_registers[51] = {18'b0, sram_Addr2};
-        csr_registers[52] = encrypted_data[63:32];
-        csr_registers[53] = encrypted_data[31: 0];
-
-        // STATUS FOR SRAMS
+        // state for srams
         if (state == IDLE)
         begin
-            csr_registers[35][31] = 1'b0;
-            csr_registers[38][0] = 1'b0;
-            csr_registers[38][31] = 1'b0;
+            csr_registers[35][31] <= 1'b0;
+            csr_registers[38][0]  <= 1'b0;
+            csr_registers[38][31] <= 1'b0;
         end
 
         else if (state == WRITE_INPUT)
         begin
-            csr_registers[35][31] = 1'b1;
-            csr_registers[38][0] = 1'b0;
-            csr_registers[38][31] = 1'b0;
+            csr_registers[35][31] <= 1'b1; // written into SRAM
+            csr_registers[38][0]  <= 1'b0;
+            csr_registers[38][31] <= 1'b0;
         end
 
         else if (state == READ_OUTPUT)
         begin
-            csr_registers[38][0] = 1'b1;
-            csr_registers[38][31] = 1'b0;
-            csr_registers[35][31] = 1'b0;
+            csr_registers[35][31] <= 1'b0;
+            csr_registers[38][0]  <= 1'b1; // read from SRAM
+            csr_registers[38][31] <= 1'b0;
 
-            csr_registers[40] = output_data2[63:32];
-            csr_registers[39] = output_data2[31: 0];
+            csr_registers[40] <= output_data2[63:32];
+            csr_registers[39] <= output_data2[31: 0];
         end
-
-
 
         // READ/WRITE
         if(slave_write && slave_chipselect && (slave_address >= 0) && (slave_address < NUMREGS))
@@ -213,15 +210,15 @@ always_comb
 begin : STATE_TRANSITION
     next_state = state;
 
-    next_sram_Addr1 = sram_Addr1;
+    next_sram_Addr1  = sram_Addr1;
     next_input_data1 = input_data1;
-    next_sramWE1 = 1'b0;
-    next_sramRE1 = 1'b0;
+    next_sramWE1     = 1'b0;
+    next_sramRE1     = 1'b0;
 
-    next_sram_Addr2 = sram_Addr2;
+    next_sram_Addr2  = sram_Addr2;
     next_input_data2 = input_data2;
-    next_sramWE2 = 1'b0;
-    next_sramRE2 = 1'b0;
+    next_sramWE2     = 1'b0;
+    next_sramRE2     = 1'b0;
     
     next_actual_data = actual_data;
 
@@ -230,21 +227,18 @@ begin : STATE_TRANSITION
     next_read_flag_1 = 1'b0;
     next_read_flag_2 = 1'b0;
 
-
     case(state)
         IDLE:
         begin
             if ( write_sram_start )
             begin
                 next_state = WRITE_INPUT;
-
                 next_input_data1 = {csr_registers[37], csr_registers[36]};
                 next_sramWE1 = 1'b1;
             end
             else if ( csr_registers[45][31] )
             begin
                 next_state = READ_OUTPUT;
-
                 next_sram_Addr2 = sram_Addr2 - 1;
                 next_sramRE2 = 1'b1;
             end

@@ -102,7 +102,7 @@ void set_Registers(PCIE_HANDLE hPCIe, char var, DWORD * a)
         bPass = PCIE_Write32(hPCIe, PCIE_BAR0, csr_registers(r + i), a[i]);
         if (!bPass)
         {
-            printf("ERROR WRITING TO REGISTERS!\n");
+            printf("Error: PCIE_Write32 in set_Registers.\n");
             return;
         }
     }
@@ -122,7 +122,7 @@ void get_Registers(PCIE_HANDLE hPCIe, char var, DWORD * a)
         bPass = PCIE_Read32(hPCIe, PCIE_BAR0, csr_registers(r + i), &a[i]);
         if (!bPass)
         {
-            printf("ERROR READING FROM REGISTERS!\n");
+            printf("Error: PCIE_Read32 in get_Registers.\n");
             return;
         }
     }
@@ -150,7 +150,7 @@ void get_Public_Keys(PCIE_HANDLE hPCIe, DWORD * x, DWORD * y, DWORD * k, DWORD *
     bPass = PCIE_Write32(hPCIe, PCIE_BAR0, csr_registers(0), 0x00000001);
     if (!bPass)
     {
-        printf("test FAILED: write did not return success\n");
+        printf("Error: PCIE_Write32 in get_Public_Keys.\n");
         return;
     }
 
@@ -159,7 +159,7 @@ void get_Public_Keys(PCIE_HANDLE hPCIe, DWORD * x, DWORD * y, DWORD * k, DWORD *
         bPass = PCIE_Read32(hPCIe, PCIE_BAR0, csr_registers(0), &ecc_1);
         if (!bPass)
         {
-            printf("test FAILED: read did not return success\n");
+            printf("Error: PCIE_Read32 in get_Public_Keys.\n");
             return;
         }
         ecc_1_done = ((ecc_1 >> 31) & 0x01);
@@ -169,7 +169,7 @@ void get_Public_Keys(PCIE_HANDLE hPCIe, DWORD * x, DWORD * y, DWORD * k, DWORD *
     bPass = PCIE_Write32(hPCIe, PCIE_BAR0, csr_registers(0), ecc_1 & 0xFFFFFFFE);
     if (!bPass)
     {
-        printf("test FAILED: write did not return success\n");
+        printf("Error: PCIE_Write32 in get_Public_Keys.\n");
         return;
     }
 
@@ -202,7 +202,7 @@ void generate_Session_Keys(PCIE_HANDLE hPCIe, DWORD * x, DWORD * y, DWORD * k)
     bPass = PCIE_Write32(hPCIe, PCIE_BAR0, csr_registers(0), 0x00000002);
     if (!bPass)
     {
-        printf("test FAILED: write did not return success\n");
+        printf("Error: PCIE_Write32 in generate_Session_Keys.\n");
         return;
     }
 
@@ -211,7 +211,7 @@ void generate_Session_Keys(PCIE_HANDLE hPCIe, DWORD * x, DWORD * y, DWORD * k)
         bPass = PCIE_Read32(hPCIe, PCIE_BAR0, csr_registers(0), &ecc_2);
         if (!bPass)
         {
-            printf("test FAILED: read did not return success\n");
+            printf("Error: PCIE_Read32 in generate_Session_Keys.\n");
             return;
         }
         ecc_2_done = ((ecc_2 >> 25) & 0x01);
@@ -221,7 +221,7 @@ void generate_Session_Keys(PCIE_HANDLE hPCIe, DWORD * x, DWORD * y, DWORD * k)
     bPass = PCIE_Write32(hPCIe, PCIE_BAR0, csr_registers(0), ecc_2 & 0xFFFFFFFD);
     if (!bPass)
     {
-        printf("test FAILED: write did not return success\n");
+        printf("Error: PCIE_Write32 in generate_Session_Keys.\n");
         return;
     }
 }
@@ -277,20 +277,8 @@ void write_SRAM(PCIE_HANDLE hPCIe, FILE * fp, int fileSize)
     DWORD lower;
     DWORD r;
 
-
-    DWORD address;
-
-
     for(x = 0; x < fileSize; x += 8) 
     {
-        bPass = PCIE_Read32(hPCIe, PCIE_BAR0, csr_registers(50), &address);
-        if (!bPass)
-        {
-            printf("test FAILED: read did not return success\n");
-            return;
-        }
-
-
         upper = 0;
         lower = 0;
 
@@ -308,7 +296,7 @@ void write_SRAM(PCIE_HANDLE hPCIe, FILE * fp, int fileSize)
         bPass = PCIE_Write32(hPCIe, PCIE_BAR0, csr_registers(37), upper);
         if (!bPass)
         {
-            printf("test FAILED: read did not return success\n");
+            printf("Error: PCIE_Write32 in write_SRAM.\n");
             return;
         }
 
@@ -316,7 +304,7 @@ void write_SRAM(PCIE_HANDLE hPCIe, FILE * fp, int fileSize)
         bPass = PCIE_Write32(hPCIe, PCIE_BAR0, csr_registers(36), lower);
         if (!bPass)
         {
-            printf("test FAILED: read did not return success\n");
+            printf("Error: PCIE_Write32 in write_SRAM.\n");
             return;
         }
 
@@ -324,7 +312,7 @@ void write_SRAM(PCIE_HANDLE hPCIe, FILE * fp, int fileSize)
         bPass = PCIE_Write32(hPCIe, PCIE_BAR0, csr_registers(35), 0x00000001);
         if (!bPass)
         {
-            printf("test FAILED: read did not return success\n");
+            printf("Error: PCIE_Write32 in write_SRAM.\n");
             return;
         }
 
@@ -335,7 +323,7 @@ void write_SRAM(PCIE_HANDLE hPCIe, FILE * fp, int fileSize)
             bPass = PCIE_Read32(hPCIe, PCIE_BAR0, csr_registers(35), &r);
             if (!bPass)
             {
-                printf("test FAILED: read did not return success\n");
+                printf("Error: PCIE_Read32 in write_SRAM.\n");
                 return;
             }
             s_read = ((r >> 31) & 0x01);
@@ -345,7 +333,7 @@ void write_SRAM(PCIE_HANDLE hPCIe, FILE * fp, int fileSize)
         bPass = PCIE_Write32(hPCIe, PCIE_BAR0, csr_registers(35), 0x00000000);
         if (!bPass)
         {
-            printf("test FAILED: read did not return success\n");
+            printf("Error: PCIE_Write32 in write_SRAM.\n");
             return;
         }
     }
@@ -357,7 +345,6 @@ void write_SRAM(PCIE_HANDLE hPCIe, FILE * fp, int fileSize)
         printf("test FAILED: read did not return success\n");
         return;
     }
-
     return;
 }
 
@@ -369,27 +356,16 @@ void read_SRAM(PCIE_HANDLE hPCIe, FILE * fp, int fileSize)
 
     DWORD r;
 
-    DWORD address;
-
     for(x = 0; x < fileSize; x += 8)
     {
         // Wait for slave to write
         char s_write = 0;
-
-
-        bPass = PCIE_Read32(hPCIe, PCIE_BAR0, csr_registers(51), &address);
-        if (!bPass)
-        {
-            printf("test FAILED: read did not return success\n");
-            return;
-        }
-
         while(!s_write) 
         {
             bPass = PCIE_Read32(hPCIe, PCIE_BAR0, csr_registers(38), &r);
             if (!bPass)
             {
-                printf("test FAILED: read did not return success\n");
+            printf("Error: PCIE_Read32 in read_SRAM.\n");
                 return;
             }
             s_write = r & 0x01;
@@ -399,7 +375,7 @@ void read_SRAM(PCIE_HANDLE hPCIe, FILE * fp, int fileSize)
         bPass = PCIE_Read32(hPCIe, PCIE_BAR0, csr_registers(40), &r);
         if (!bPass)
         {
-            printf("test FAILED: read did not return success\n");
+            printf("Error: PCIE_Read32 in read_SRAM.\n");
             return;
         }
 
@@ -409,7 +385,7 @@ void read_SRAM(PCIE_HANDLE hPCIe, FILE * fp, int fileSize)
         bPass = PCIE_Read32(hPCIe, PCIE_BAR0, csr_registers(39), &r);
         if (!bPass)
         {
-            printf("test FAILED: read did not return success\n");
+            printf("Error: PCIE_Read32 in read_SRAM.\n");
             return;
         }
 
@@ -419,7 +395,7 @@ void read_SRAM(PCIE_HANDLE hPCIe, FILE * fp, int fileSize)
         bPass = PCIE_Write32(hPCIe, PCIE_BAR0, csr_registers(38), 0x80000000);
         if (!bPass)
         {
-            printf("test FAILED: read did not return success\n");
+            printf("Error: PCIE_Write32 in read_SRAM.\n");
             return;
         }
     }
@@ -440,46 +416,39 @@ void des(PCIE_HANDLE hPCIe,  FILE * fin, FILE * fout, char encryption)
 
     // Reset pointer to head of file
     fseek(fin, 0, SEEK_SET);
-    printf("FileSize %d \n", fileSize);
-
-    printf("----------------------Writing to SRAM!-------------------\n");
+    printf("Writing to SRAM...\n");
 
     // Write to SRAM from file
     write_SRAM(hPCIe, fin, fileSize);
-
 
     // Set des start (bit 3) /encryption (bit 4)
     bPass = PCIE_Write32(hPCIe, PCIE_BAR0, csr_registers(0), 0x00000004 | (encryption << 3));
     if (!bPass)
     {
-        printf("test FAILED: read did not return success\n");
+        printf("Error: PCIE_Write32 in des.\n");
         return;
     }
 
-    printf("Waiting for DES to complete!\n");
+    printf("Waiting for DES to complete...\n");
     while(!des_done) 
     {
         bPass = PCIE_Read32(hPCIe, PCIE_BAR0, csr_registers(0), &des);
         if (!bPass)
         {
-            printf("test FAILED: read did not return success\n");
+        printf("Error: PCIE_Read32 in des.\n");
             return;
         }
         des_done = ((des >> 24) & 0x01);
     }
-    printf("DES is completed!\n");
 
     // Set start read
     bPass = PCIE_Write32(hPCIe, PCIE_BAR0, csr_registers(45), 0x80000000);
     if (!bPass)
     {
-        printf("test FAILED: read did not return success\n");
+        printf("Error: PCIE_Write32 in read_SRAM.\n");
     }
-
-
-    printf("---------------------Reading from SRAM!------------------\n");
-
+    
     // Read from SRAM into buffer
+    printf("Reading from SRAM...\n");
     read_SRAM(hPCIe, fout, fileSize);
-
 }
